@@ -1,0 +1,34 @@
+reset
+
+# 아래 경로는 본인 stp 파일에 맞게 수정
+import step "C:\Users\Administrator\Desktop\YOURFILENAME.stp"
+
+# 서로 면을 공유하는 바디를 찾기
+imprint all
+
+# Share topology 실행
+merge all
+
+# CATIA에서 stp 파일로 내보내면 기본 단위가 [mm].
+# Cubit은 단위 정보를 저장하지 않기 때문에 OpenMC 기본 단위인 [cm]로 바꿔야 함.
+volume all scale 0.1 about 0 0 0
+
+
+# 아래 볼륨 번호는 scale까지 실행한 후 Model Tree에서 직접 확인 필요
+volume 1 name "cell_Outer_He"
+volume 2 name "cell_First_Wall"
+volume 3 name "cell_First_Wall_Channel"
+volume 4 name "cell_Pressure_Tube"
+volume 5 name "cell_Pin"
+volume 6 name "cell_Breeder"
+volume 7 name "cell_Inner_He"
+volume 8 name "cell_Outer_Multiplier"
+
+# 그룹 생성
+group "mat:eurofer" add volume 3 4 5
+group "mat:He" add volume 1 7
+group "mat:Be12Ti" add volume 8
+group "mat:breeder_pebble_mix" add volume 6
+group "mat:tungsten" add volume 2
+
+# 그룹 생성 후 삼각형 격자 생성
