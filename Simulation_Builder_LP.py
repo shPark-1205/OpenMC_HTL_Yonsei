@@ -1,5 +1,7 @@
 # Simulation_Builder_LP.py
 
+# DAGMC TEST
+
 import openmc
 import numpy as np
 import matplotlib.pyplot as plt
