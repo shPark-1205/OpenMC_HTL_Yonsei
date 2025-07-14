@@ -40,7 +40,7 @@ def main():
     try:
 
         # 설정 파일(yaml) 불러오기
-        print("--- Loading configuration from config_HP.yaml file ---")
+        print("--- Loading configuration from config_LP.yaml file ---")
         with open('config_LP.yaml', 'r') as f:
             config = yaml.safe_load(f)
 
