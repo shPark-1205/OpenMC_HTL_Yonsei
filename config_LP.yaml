@@ -4,7 +4,7 @@
 # 해석 설정
 simulation:
   particles: 10000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
-  batches: 50 # 해석의 iteration
+  batches: 30 # 해석의 iteration
   inactive: 0
   threads: 24 # 컴퓨터 코어 수 (미설정시 최대 코어로 자동 설정)
 
