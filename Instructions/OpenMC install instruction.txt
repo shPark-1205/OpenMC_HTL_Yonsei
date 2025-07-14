@@ -1,0 +1,139 @@
+2025.07.04. (금)
+박성혁
+연세대학교 열전달 연구실
+
+Windows 환경에서 가상의 Linux 환경을 만들고, OpenMC 설치하는 방법.
+많은 시행착오를 겪었음.
+OpenMC는 PyThon API와 C/C++ API를 지원함.
+필자는 C/C++보다 PyThon API가 (진짜 조금) 편해서 PyThon으로 진행하고 있음.
+본인은 C/C++이 더 편하다 --> 알아서 하십쇼.
+
+1. 내가 직접 OpenMC를 설치하겠다!
+
+ ㅇ OpenMC GitHub 홈페이지 방문
+	- https://github.com/openmc-dev/openmc
+	- 여러 branch 중 안정화된 branch 확인
+	- 보통 develop branch가 가장 최신이니까, GitHub 둘러보고 문제 없으면 이걸로 진행.
+	
+ ㅇ Docker 환경 설치
+	- OpenMC는 Linux 환경에서 작동하는데, 대부분 Windows 환경을 쓰니 가상의 Linux에서 작업 필요
+	- https://www.docker.com/
+	- Docker Desktop을 설치하고, 계정 만들어서 실행
+	- 아래 작업을 진행하는 동안, 그리고 OpenMC 해석을 진행하는 동안 Docker Desktop은 실행 필수
+
+ ㅇ OpenMC 설치 준비
+	- GitHub에서 제공하는 Dockerfile을 사용해도 되나, 필자는 Dockerhub에서 바로 빌드함.
+		- 이유는 모르겠지만 Dockerfile로 설치하면 자꾸 오류가 남.
+		- 오류는 계속 해결 중.
+	- Dockerhub의 OpenMC 폴더 진입
+		- https://hub.docker.com/r/openmc/openmc/tags
+	- 확인한 OpenMC branch에 맞추어 TAG 복사
+		- CAD 파일을 활용한 OpenMC를 진행하려면 DAGMC가 포함되어야 함.
+		- 필자는 DAGMC와 LibMesh가 모두 포함된 것을 사용함.
+		- docker pull openmc/openmc:develop-dagmc-libmesh
+
+ ㅇ OpenMC 설치
+	- Docker Desktop 실행 중인지 확인
+	- CMD 실행 (관리자모드 아니어도 괜찮음)
+	- OpenMC 설치 준비에서 복사한 TAG 입력
+		- 열심히 설치
+	- CMD 창에 docker images 입력
+		- 방금 설치한 OpenMC 이미지가 나오면 설치 성공
+		- 이름은 openmc/openmc, 태그는 branch-dagmc-libmesh로 되어 있을 것임.
+	- docker run -it --name [원하는 container 이름] [image 이름 혹은 ID] /bin/bash
+		- ex) docker run -it --name openmc_container_v1.0 a19b184aa070 /bin/bash
+		- 입력 후 root@~~~:/# 와 같이 경로가 변경되면 container 내부로 진입 성공
+	- openmc --v 입력
+		- 설치된 OpenMC 정보가 표시됨.
+		- DAGMC support : yes 확인
+	- pip list 입력
+		- 빌드한 이미지에 포함된 패키지 목록
+		- 여기에 사용자가 필요한 패키지를 추가해가야 함.
+
+ ㅇ Nuclear cross-section 설치
+	- OpenMC 해석을 위해선 nuclear cross-section 파일 필요
+	- Nuclear cross-section 다운로드
+		- https://openmc.org/official-data-libraries/
+		- 주로 사용하는 ENDF 다운로드
+		- 적당한 폴더에 압축 풀기
+			- endfb-vii.1-hdf5 폴더 생성되고 이 폴더 안에 library 존재
+	- Docker container에 라이브러리 복사
+		- CMD 창에서 container 환경에 들어가 있는지 확인 (root@~~~)
+		- mkdir /app/data 입력 (임의의 경로. 수정해도 됨.)
+		- ctrl + P + Q 입력 (Container의 실행은 그대로 두고 container 환경 빠져나오기)
+		- docker cp [endfb-vii.1-hdf5 경로] [container 이름:/app/data/]
+			-ex) docker cp "C:\Users\HTL-SHP\OpenMC\endfb-vii.1-hdf5" openmc_container_v1.0:/app/data/
+		- (선택) 복사 잘 되었는지 확인
+			- docker exec [container 이름] /bin/bash
+			- ls /app/data 입력
+			- 복사한 파일이 들어있으면 성공
+
+ ㅇ PyThon 패키지 설치
+	- 설치한 OpenMC에 사용자가 필요한 패키지를 (필요하면) 더 설치해야 함.
+	- 방법 1 : 내가 필요한 패키지를 직접 설치하겠다.
+		- CMD 창에서 container 환경으로 진입
+		- 필요한 패키지 알아서 설치
+	- 방법 2 : 모르겠고 필자가 다 해놓은 것을 달라.
+		- CMD 창에서 container 환경 밖으로 이탈
+		- requirements.txt 파일 저장 (주로 사용하는 폴더에, 연락주세요.)
+		- docker cp [requirements.txt 경로] [container 이름:/app/]
+			- ex) docker cp "C:\Users\HTL-SHP\OpenMC\requirements.txt" openmc_container_v1.0/app/
+		- docker exec [container 이름] pip install -r /app/requirements.txt
+
+ ㅇ 패키지 사용에 필요한 라이브러리 설치
+	- CMD 창에 docker exec -it [container 이름] /bin/bash 입력
+	- Container 환경 내에서 아래 입력 후 설치
+		- apt-get install -y --fix-missing \
+        libmpich-dev libhdf5-serial-dev libhdf5-mpich-dev \
+        libpng-dev libglu1-mesa libxcursor1  libxrender1 \
+		libxi6 libxrandr2 libgl1 libglu1 libglx-mesa0 \
+		libxinerama1 libexpat1 libeigen3-dev libtbb-dev \
+		libglfw3-dev libxft2
+
+ ㅇ 새로운 image 생성
+	- 여기까지 잘 했으면 이제 실제 PyThon에 사용할 Docker image 생성 준비 완료
+	- CMD 창에 container 외부 환경에서 아래 입력
+		- docker commit [container ID] [New image name]
+			- ex) docker commit openmc_container_v1.0 openmc_psh_v1.1
+	- Container 환경 밖으로 이탈
+	- docker images 입력
+		- 새로 저장한 image가 있으면 성공
+
+ ㅇ PyThon 환경 구축
+	- 사용자가 원하는 PyThon IDE 설치
+		- 필자는 PyCharm 사용함. 아래 설명은 PyCharm 기준이니 다른 IDE 사용할 사용자는 알아서 구축하세요.
+	- 해석 진행할 새 프로젝트 생성
+	- Ctrl + Alt + S 눌러서 설정 진입
+	- 좌측 탭에 Project: 프로젝트 명 클릭
+	- Python Interpreter 클릭
+	- Add Interpreter - On Docker 클릭
+	- Image - Pull or use existing 클릭
+	- Image tag: 전 단계에서 생성한 image 이름 입력
+	- Next - Create 클릭
+	- 내가 설치한 PyThon 패키지가 잘 설치되어 있는지 확인
+	- 성공!
+
+ ㅇ 그래픽 환경 설치
+	- Docker interpreter는 가상의 Linux 환경이니까 코드를 실행했을 때 그래픽을 본인 컴퓨터로 사용하라는 명령을 해야 함.
+	- VcXsrv 설치
+		- https://vcxsrv.com/
+		- 설치 완료 후 XLaunch 실행
+		- (본인 컴퓨터에 맞게 선택 후) 다음 - 다음
+		- (중요!!) Disable access control 선택
+		- 마침
+	- PyCharm 환경 변수 생성
+		- PyCharm 우측 상단 [프로젝트 이름] 옆 세로점 3개 클릭
+		- Edit Configuration 클릭
+		- Environment variables 추가
+			- DISPLAY=host.docker.internal:0
+
+ ㅇ 해석을 즐기세요.
+	
+
+
+2. 모르겠고 필자가 다 해놓은 것을 달라!
+ ㅇ 필자가 저장해놓은 Docker image 받아서 본인 Docker desktop에 load
+ 
+ ㅇ PyThon 환경 구축부터 실행
+ 
+ ㅇ 해석을 즐기세요.
