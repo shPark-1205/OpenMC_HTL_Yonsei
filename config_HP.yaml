@@ -1,0 +1,71 @@
+# OpenMC 시뮬레이션 절체 설정 관리하는 파일
+# 이 파일 내의 값만 수정하여 다양한 조건 해석 가능
+
+# 해석 설정
+simulation:
+  particles: 2000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  batches: 50 # 해석의 iteration
+  inactive: 0
+  threads: 24 # 컴퓨터 코어 수 (미설정시 최대 코어로 자동 설정)
+
+# 재료 설정
+materials:
+  breeder:
+    li_enrichment: 60.0
+    packing_fraction: 0.64
+    mixture_Li4SiO4: 0.65
+    mixture_Li2TiO3: 0.35
+    
+  he:
+    temperature: 723 # [K]
+    pressure: 8.0E+6 # [Pa]
+
+
+# 형상 설정 [cm]
+geometry:
+  tokamak_major_radius: 906.0
+  tokamak_minor_radius: 292.258
+  pitch: 11.0 # 육각형 격자 pitch (실제 핀-핀 사이 거리 아닌 것에 주의!)
+
+  tube: # Pressure tube
+    outer_radius: 5.0
+    inner_radius: 4.5
+    length: 46.2
+
+  pin_outer: # 동심관 쪽 핀
+    outer_radius: 4.3
+    inner_radius: 4.2
+
+  pin_inner: # 노즐 쪽 핀
+    outer_radius: 0.7
+    inner_radius: 0.6
+  
+  pin:
+    width: 0.1 # 핀의 두께
+
+  inner_multiplier:
+    radius: 3.0 # 핀 내부 증배재의 바깥쪽 반지름
+    length: 18.0
+  
+  first_wall:
+    armor_height: 0.2 # W 코팅 두께
+    channel_height: 2.2 # 채널 총 두께 (현재는 헬륨 채널 고려 X)
+  
+  outer_multiplier:
+    tube_gap: 0.1 # Pressure tube와 핀 외부 증배재 사이의 간격 (Purge)
+    impinging_plate_gap: 0.5 # 충돌면과 핀 외부 증배재 사이의 간격 (Purge)
+    length: 31.0 # 핀 외부 증배재의 축 방향 길이
+    pitch: 0.3 # 핀 외부 증배재 사이의 간격 (Purge)
+  
+  nozzle_to_target: 1.2 # H/D 에서의 H
+
+# 후처리용 격자 설정 [cm or 개]
+mesh:
+  length_x: 46.2 # First wall부터의 x 방향 길이 (462 mm)
+  length_y: 16.0 # y 방향 길이 (160 mm)
+  z_center: 0.0 # 2D mesh를 사용할 경우 zx 평면의 y 좌표
+  z_thickness: 0.005 # 2D mesh인 경우 y 축 방향 격자 두께
+  division_x: 9240 # x 방향 격자 개수
+  division_y: 1600 # y 방향 격자 개수
+  division_z: 1 # z 방향 격자 개수
+
