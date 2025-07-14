@@ -12,6 +12,7 @@ from tqdm import tqdm
 import neutronics_material_maker as nmm
 from openmc_plasma_source import tokamak_source, fusion_ring_source, fusion_point_source
 from openmc_source_plotter import plot_source_energy, plot_source_position, plot_source_direction
+from dagmc_geometry_slice_plotter import plot_axis_slice
 
 # Periodic 육각기둥 내부 단면에 무작위 위치의 중성자 소스 분포
 def create_hexagonal_source_points(n_points, x_coord, pitch):
@@ -203,313 +204,47 @@ class NuclearFusion:
             -> 이후 DAGMC를 활용해서 OpenMC로 .h5m 파일 전송
         """
 
-        print("\n\n\nDefining geometry with OpenMC CSG...")
+        print("\n\n\nDefining geometry with DAGMC from .h5m file...")
 
-        # 헬퍼 함수를 차례로 불러와서 최종 cell 목록 생성
-        surfaces = self._create_surfaces()
-        regions = self._create_regions(surfaces)
-        cells = self._create_cells(regions)
+        # CAD 형상을 충분히 감쌀 수 있는 크기의 경계 설정
+        z_width = 100.0
+        y_height = 100.0
+        x_min = -100.0
+        x_max = 5000.0
 
-        print("\nAssembling geometry...")
+        # 최외곽 경계 사각기둥 생성
+        prism = openmc.model.RectangularPrism(
+            width=z_width,
+            height=y_height,
+            axis='x',
+            origin=(0.0, 0.0),
+            boundary_type='periodic'
+        )
 
-        # cells 목록에 있는 것들을 하나로 합치기
-        root_universe = openmc.Universe(cells=list(cells.values()))
+        # 사각기둥 끝을 닫을 x 평면
+        x_min_plane = openmc.XPlane(x0=x_min, boundary_type='vacuum')
+        x_max_plane = openmc.XPlane(x0=x_max, boundary_type='vacuum')
+
+        final_region = -prism & +x_min_plane & -x_max_plane
+
+        # DAGMC를 위해 형상 불러오기
+        filename = r'geometries/20250714_EU_DEMO_HCPB_LP_UNIT_CELL.h5m'
+        dag_universe = openmc.DAGMCUniverse(filename=filename, auto_geom_ids=False)
+
+        root_cell = openmc.Cell(
+            name='root_cell',
+            region=final_region,
+            fill=dag_universe
+        )
+
+        # 최종 형상 조립
+        root_universe = openmc.Universe(cells=[root_cell])
         geometry_obj = openmc.Geometry(root_universe)
 
         print("\nExporting geometry to geometry.xml...")
         geometry_obj.export_to_xml()
         print("\ngeometry.xml exported successfully.\n")
         self.geometry = geometry_obj
-
-    # 해석에 사용할 면 정의 (헬퍼 함수)
-    def _create_surfaces(self):
-
-        # OpenMC CSG 기본 단위 : [cm]
-        # Cylindrical 좌표계와 비슷한 작업은 현재 z축 기준만 지원
-        # 기본적인 면 생성
-
-        """
-        최외곽 경계면에는 boundary condition 설정 필요
-            -> transmission : 중성자가 아무 손실 없이 투과
-            -> vacuum : 투과한 중성자는 바로 소멸
-            -> reflective : specular reflection
-                -> albedo 설정 가능 : 입사한 중성자 대비 반사한 중성자의 양
-            -> white : diffuse particle reflection
-                -> albedo 설정 가능 : 입사한 중성자 대비 반사한 중성자의 양
-            -> periodic : can be applied to pairs of planar surfaces
-        """
-
-        surfaces = {}
-
-        # config.yaml 파일의 geometry 참조
-        geo_config = self.config['geometry']
-
-        surfaces['tube_outer_radius'] = openmc.XCylinder(r=geo_config['tube']['outer_radius'],
-                                             name='Tube Outer Radius')  # Pressure tube의 바깥쪽 면
-        surfaces['tube_inner_radius'] = openmc.XCylinder(r=geo_config['tube']['inner_radius'],
-                                             name='Tube Inner Radius')  # Pressure tube의 안쪽 면
-        surfaces['outer_pin_outer_radius'] = openmc.XCylinder(r=geo_config['pin_outer']['outer_radius'],
-                                                  name='Outer Pin Outer Radius')  # 바깥쪽 (동심관쪽) 핀의 바깥쪽 면
-        surfaces['outer_pin_inner_radius'] = openmc.XCylinder(r=geo_config['pin_outer']['inner_radius'],
-                                                  name='Outer Pin Inner Radius')  # 바깥쪽 (동심관쪽) 핀의 안쪽 면
-        surfaces['inner_pin_outer_radius'] = openmc.XCylinder(r=geo_config['pin_inner']['outer_radius'],
-                                                              name='Inner Pin Outer Radius')  # 안쪽 (노즐쪽) 핀의 바깥쪽 면
-        surfaces['inner_pin_inner_radius'] = openmc.XCylinder(r=geo_config['pin_inner']['inner_radius'],
-                                                              name='Inner Pin Inner Radius')  # 안쪽 (노즐쪽) 핀의 안쪽 면
-        surfaces['first_wall_plasma_side'] = openmc.XPlane(x0=self.tokamak_radius, name='First wall')
-        surfaces['first_wall_channel_side'] = openmc.XPlane(x0=self.tokamak_radius
-                                                               + geo_config['first_wall']['armor_height'],
-                                                            name='First wall channel side')
-        surfaces['channel_pin_side'] = openmc.XPlane(x0=self.tokamak_radius
-                                                       + geo_config['first_wall']['armor_height']
-                                                       + geo_config['first_wall']['channel_height'],
-                                                     name = 'Channel pin side')
-        surfaces['impinging_plate'] = openmc.XPlane(x0=self.tokamak_radius
-                                                       + geo_config['first_wall']['armor_height']
-                                                       + geo_config['first_wall']['channel_height']
-                                                       + geo_config['pin']['impinging_plate'],
-                                                    name='Impinging Plate')  # 충돌 면
-        surfaces['nozzle_tip_neg'] = openmc.XPlane(x0=self.tokamak_radius
-                                                      + geo_config['first_wall']['armor_height']
-                                                      + geo_config['first_wall']['channel_height']
-                                                      + geo_config['pin']['impinging_plate']
-                                                      + geo_config['nozzle_to_target'],
-                                                   name='Nozzle Tip Negative')  # 핀 노즐의 가장 아랫면
-        surfaces['nozzle_tip_pos'] = openmc.XPlane(x0=self.tokamak_radius
-                                                      + geo_config['first_wall']['armor_height']
-                                                      + geo_config['first_wall']['channel_height']
-                                                      + geo_config['pin']['impinging_plate']
-                                                      + geo_config['nozzle_to_target']
-                                                      + geo_config['pin']['nozzle_tip'],
-                                                   name='Nozzle Tip Positive')  # 핀 노즐의 윗면
-        surfaces['nozzle_diagonal_pos'] = openmc.XPlane(x0=self.tokamak_radius
-                                                           + geo_config['first_wall']['armor_height']
-                                                           + geo_config['first_wall']['channel_height']
-                                                           + geo_config['pin']['impinging_plate']
-                                                           + geo_config['nozzle_to_target']
-                                                           + geo_config['pin']['nozzle_tip']
-                                                           + geo_config['pin']['diagonal_height'],
-                                                   name='Nozzle Diagonal Positive')
-        surfaces['outer_pin_diagonal'] = openmc.model.XConeOneSided(x0=(self.tokamak_radius
-                                                           + geo_config['first_wall']['armor_height']
-                                                           + geo_config['first_wall']['channel_height']
-                                                           + geo_config['pin']['impinging_plate']
-                                                           + geo_config['nozzle_to_target']
-                                                           + geo_config['pin']['nozzle_tip']
-                                                           + geo_config['pin']['diagonal_height'])
-                                                           - (geo_config['pin_outer']['outer_radius'] / np.tan(geo_config['pin_diagonal']['diagonal_angle'])),
-                                                                    y0=0.0, z0=0.0,
-                                                                    r2=(np.tan(geo_config['pin_diagonal']['diagonal_angle'])**2),
-                                                   name='Outer Pin Diagonal')
-        surfaces['inner_pin_diagonal'] = openmc.model.XConeOneSided(x0=(self.tokamak_radius
-                                                           + geo_config['first_wall']['armor_height']
-                                                           + geo_config['first_wall']['channel_height']
-                                                           + geo_config['pin']['impinging_plate']
-                                                           + geo_config['nozzle_to_target']
-                                                           + geo_config['pin']['nozzle_tip']
-                                                           + geo_config['pin']['diagonal_height'])
-                                                           - (geo_config['pin_outer']['inner_radius'] / np.tan(geo_config['pin_diagonal']['diagonal_angle'])),
-                                                                    y0=0.0, z0=0.0,
-                                                                    r2=(np.tan(geo_config['pin_diagonal']['diagonal_angle'])**2),
-                                                   name='inner Pin Diagonal')
-
-
-        # Outer 증배재 정의
-        surfaces['outer_multiplier_inner_radius'] = openmc.XCylinder(r=geo_config['tube']['outer_radius']
-                                                           + geo_config['outer_multiplier']['tube_gap'],
-                                                         name='Outer Multiplier Radius')  # Pressure tube와 1 mm 간격
-        surfaces['outer_multiplier_min_pos'] = openmc.XPlane(x0=(self.tokamak_radius
-                                                     + geo_config['first_wall']['armor_height']
-                                                     + geo_config['first_wall']['channel_height']
-                                                     + geo_config['outer_multiplier']['impinging_plate_gap']),
-                                                 name='Outer Multiplier Min Positive')
-        surfaces['outer_multiplier_max_pos'] = openmc.XPlane(x0=(self.tokamak_radius
-                                                     + geo_config['first_wall']['armor_height']
-                                                     + geo_config['first_wall']['channel_height']
-                                                     + geo_config['outer_multiplier']['impinging_plate_gap']
-                                                     + geo_config['outer_multiplier']['length']),
-                                                 name='Outer Multiplier Max Positive')
-
-        # Outer 증배재
-        surfaces['outer_multiplier_z_pos'] = openmc.Plane(a=0.0, b=0.0, c=-1.0, d=(-(geo_config['pitch'] / np.sqrt(3.0) - geo_config['outer_multiplier']['pitch'])),
-                                                  name='Outer Multiplier +z')  # +half-space: 핀 안쪽
-        surfaces['outer_multiplier_z_neg'] = openmc.Plane(a=0.0, b=0.0, c=-1.0, d=(+(geo_config['pitch'] / np.sqrt(3.0) - geo_config['outer_multiplier']['pitch'])),
-                                                  name='Outer Multiplier -z')  # -half-space: 핀 안쪽
-        surfaces['outer_multiplier_y_neg_z_pos'] = openmc.Plane(a=0.0, b=-np.sqrt(3.0), c=1.0,
-                                                        d=(+(geo_config['pitch'] * (2.0 / np.sqrt(3.0)) - geo_config['outer_multiplier']['pitch']*2)),
-                                                        name='Outer Multiplier -y+z')  # -half-space: 핀 안쪽
-        surfaces['outer_multiplier_y_pos_z_neg'] = openmc.Plane(a=0.0, b=-np.sqrt(3.0), c=1.0,
-                                                        d=(-(geo_config['pitch'] * (2.0 / np.sqrt(3.0)) - geo_config['outer_multiplier']['pitch']*2)),
-                                                        name='Outer Multiplier +y-z')  # +half-space: 핀 안쪽
-        surfaces['outer_multiplier_y_pos_z_pos'] = openmc.Plane(a=0.0, b=np.sqrt(3.0), c=1.0,
-                                                        d=(+(geo_config['pitch'] * (2.0 / np.sqrt(3.0)) - geo_config['outer_multiplier']['pitch']*2)),
-                                                        name='Outer Multiplier +y+z')  # -half-space: 핀 안쪽
-        surfaces['outer_multiplier_y_neg_z_neg'] = openmc.Plane(a=0.0, b=np.sqrt(3.0), c=1.0,
-                                                        d=(-(geo_config['pitch'] * (2.0 / np.sqrt(3.0)) - geo_config['outer_multiplier']['pitch']*2)),
-                                                        name='Outer Multiplier -y-z')  # +half-space: 핀 안쪽
-
-        # Outer 증배재의 periodic 평면. Periodic 면끼리 법선 벡터 일치 필수!!
-        # Half-space 부호 주의!!! : ax+by+cz-d=0
-        # 별도 PPT 파일 육각형 그림 참고
-        surfaces['periodic_z_pos'] = openmc.Plane(a=0.0, b=0.0, c=-1.0, d=(-geo_config['pitch'] / np.sqrt(3.0)),
-                                      name='Periodic +z', boundary_type='periodic')  # +half-space: 핀 안쪽
-        surfaces['periodic_z_neg'] = openmc.Plane(a=0.0, b=0.0, c=-1.0, d=(geo_config['pitch'] / np.sqrt(3.0)),
-                                      name='Periodic -z', boundary_type='periodic')  # -half-space: 핀 안쪽
-        surfaces['periodic_y_neg_z_pos'] = openmc.Plane(a=0.0, b=-np.sqrt(3.0), c=1.0,
-                                            d=(geo_config['pitch'] * (2.0 / np.sqrt(3.0))),
-                                            name='Periodic -y+z', boundary_type='periodic')  # -half-space: 핀 안쪽
-        surfaces['periodic_y_pos_z_neg'] = openmc.Plane(a=0.0, b=-np.sqrt(3.0), c=1.0,
-                                            d=(-geo_config['pitch'] * (2.0 / np.sqrt(3.0))),
-                                            name='Periodic +y-z', boundary_type='periodic')  # +half-space: 핀 안쪽
-        surfaces['periodic_y_pos_z_pos'] = openmc.Plane(a=0.0, b=np.sqrt(3.0), c=1.0,
-                                            d=(geo_config['pitch'] * (2.0 / np.sqrt(3.0))),
-                                            name='Periodic +y+z', boundary_type='periodic')  # -half-space: 핀 안쪽
-        surfaces['periodic_y_neg_z_neg'] = openmc.Plane(a=0.0, b=np.sqrt(3.0), c=1.0,
-                                            d=(-geo_config['pitch'] * (2.0 / np.sqrt(3.0))),
-                                            name='Periodic -y-z', boundary_type='periodic')  # +half-space: 핀 안쪽
-
-        # Periodic surface가 한 쌍 이상인 경우 explicit하게 설정 필요
-        surfaces['periodic_z_pos'].periodic_surface = surfaces['periodic_z_neg']
-        surfaces['periodic_y_neg_z_pos'].periodic_surface = surfaces['periodic_y_pos_z_neg']
-        surfaces['periodic_y_pos_z_pos'].periodic_surface = surfaces['periodic_y_neg_z_neg']
-
-
-        # 해석할 형상 및 중성자 소스를 모두 포함하고 있는 전체 부피 생성을 위한 면
-        surfaces['bound_x_min'] = openmc.XPlane(x0=-(self.tokamak_radius
-                                         + geo_config['tube']['length']),
-                                    name='Cell Min Negative', boundary_type='vacuum')
-        surfaces['bound_x_max'] = openmc.XPlane(x0=(self.tokamak_radius
-                                        + geo_config['tube']['length']),
-                                    name='Cell Max Positive', boundary_type='vacuum')
-
-        return surfaces
-
-    # 해석에 사용할 region 정의 (헬퍼 함수)
-    def _create_regions(self, surfaces):
-        regions = {}
-
-        """
-        CSG로 만든 기본적인 plane, cylinder 등의 조합을 통해 형상의 region(부피) 설정
-        & : intersection(and), | : union(or), ~ : complement(not)
-        """
-
-        # 주기 조건을 가지는 육각형 면 집합
-        periodic_boundary = (+surfaces['periodic_z_pos'] & -surfaces['periodic_y_neg_z_pos'] &
-                             +surfaces['periodic_y_neg_z_neg'] & -surfaces['periodic_z_neg'] &
-                             +surfaces['periodic_y_pos_z_neg'] & -surfaces['periodic_y_pos_z_pos'])
-
-        # 해석 최외곽 부피 (주기적 경계와 진공 경계의 조합)
-        regions['simulation_volume'] = periodic_boundary & +surfaces['bound_x_min'] & -surfaces['bound_x_max']
-
-        # First wall
-        regions['first_wall_region'] = periodic_boundary & +surfaces['first_wall_plasma_side'] & -surfaces['first_wall_channel_side']
-
-        # First wall channel
-        regions['first_wall_channel_region'] = periodic_boundary & +surfaces['first_wall_channel_side'] & -surfaces['channel_pin_side']
-
-        # Pressure tube
-        tube_outer_region = -surfaces['tube_outer_radius'] & +surfaces['tube_inner_radius'] & +surfaces['channel_pin_side'] & -surfaces['bound_x_max']
-        tube_impinging_region = -surfaces['tube_inner_radius'] & +surfaces['channel_pin_side'] & -surfaces['impinging_plate']
-        regions['tube_region'] = tube_outer_region | tube_impinging_region
-
-        # Pin 내부 증식재
-        regions['breeder_region'] = +surfaces['inner_pin_outer_radius'] & +surfaces['nozzle_tip_pos'] & -surfaces['inner_pin_diagonal'] & -surfaces['outer_pin_inner_radius'] & -surfaces['bound_x_max']
-
-        # Pin (Pin 껍데기에서 증식재 빼기)
-        pin_shell_region = +surfaces['inner_pin_inner_radius'] & +surfaces['nozzle_tip_neg'] & -surfaces['outer_pin_diagonal'] & -surfaces['outer_pin_outer_radius'] & -surfaces['bound_x_max']
-        regions['pin_region'] = pin_shell_region & ~regions['breeder_region']
-
-        # Pin 외부 증배재
-        outer_multiplier_boundary = (+surfaces['outer_multiplier_z_pos'] & -surfaces['outer_multiplier_y_neg_z_pos'] &
-                             +surfaces['outer_multiplier_y_neg_z_neg'] & -surfaces['outer_multiplier_z_neg'] &
-                             +surfaces['outer_multiplier_y_pos_z_neg'] & -surfaces['outer_multiplier_y_pos_z_pos'])
-        regions['outer_multiplier_region'] = outer_multiplier_boundary & +surfaces['outer_multiplier_min_pos'] & -surfaces['outer_multiplier_max_pos'] & +surfaces['outer_multiplier_inner_radius']
-
-        # Pin 내부 헬륨 (Tube 껍데기에서 tube, pin, 증식재 빼기)
-        tube_shell_region = -surfaces['tube_outer_radius'] & +surfaces['channel_pin_side'] & -surfaces['bound_x_max']
-        regions['inner_he_region'] = (tube_shell_region
-                                      & ~(regions['tube_region'] | regions['pin_region'] | regions['breeder_region'])
-                                      )
-        # Pin 외부 헬륨
-        outer_he_shell_region = periodic_boundary & +surfaces['tube_outer_radius'] & +surfaces['channel_pin_side'] & -surfaces['outer_multiplier_max_pos']
-        regions['outer_he_region'] = outer_he_shell_region & ~regions['outer_multiplier_region']
-
-
-        # Void region
-        # 재료가 채워진 모든 'Region'들을 하나의 리스트로 묶음
-        filled_material_regions = [
-            regions['first_wall_region'],
-            regions['first_wall_channel_region'],
-            regions['tube_region'],
-            regions['pin_region'],
-            regions['breeder_region'],
-            regions['outer_multiplier_region'],
-            regions['inner_he_region'],
-            regions['outer_he_region'],
-        ]
-
-        # Void region = (전체 시뮬레이션 부피) - (채워진 모든 영역)
-        regions['void_region'] = regions['simulation_volume'] & ~openmc.Union(filled_material_regions)
-
-        return regions
-
-    # 해석에 사용할 cell 정의 (헬퍼 함수)
-    def _create_cells(self, regions):
-        cells = {}
-
-        # 만든 부피로 Cell 생성 (재료랑 region 부여)
-        cells['first_wall_cell'] = openmc.Cell(fill=self.materials['tungsten'],
-                                               region=regions['first_wall_region'], cell_id=1,
-                                               name='First Wall')
-        cells['first_wall_channel_cell'] = openmc.Cell(fill=self.materials['eurofer'],
-                                                       region=regions['first_wall_channel_region'],cell_id=2,
-                                                       name='First Wall Channel')
-        cells['tube_cell'] = openmc.Cell(fill=self.materials['eurofer'],
-                                         region=regions['tube_region'], cell_id=3,
-                                         name='Pressure tube')
-        cells['pin_cell'] = openmc.Cell(fill=self.materials['eurofer'],
-                                        region=regions['pin_region'], cell_id=4,
-                                        name='Pin')
-        cells['breeder_cell'] = openmc.Cell(fill=self.materials['breeder_pebble_mix'],
-                                            region=regions['breeder_region'], cell_id=6,
-                                            name='Breeder')
-        cells['outer_multiplier_cell'] = openmc.Cell(fill=self.materials['Be12Ti'],
-                                                     region=regions['outer_multiplier_region'], cell_id=7,
-                                                     name='Outer Multiplier')
-        cells['inner_helium_cell'] = openmc.Cell(fill=self.materials['He'],
-                                                 region=regions['inner_he_region'], cell_id=8,
-                                                 name='Helium Inner')
-        cells['outer_helium_cell'] = openmc.Cell(fill=self.materials['He'],
-                                                 region=regions['outer_he_region'], cell_id=9,
-                                                 name='Helium Outer')
-        cells['void_cell'] = openmc.Cell(fill=None,
-                                         region=regions['void_region'], cell_id=10,
-                                         name='Void')
-        # outer_multiplier_cell_1_2 = openmc.Cell(fill=self.materials['Be12Ti'], region=outer_multiplier_region_1_2, cell_id=5)
-        # outer_multiplier_cell_3_4 = openmc.Cell(fill=self.materials['Be12Ti'], region=outer_multiplier_region_3_4, cell_id=6)
-        # outer_multiplier_cell_5_6 = openmc.Cell(fill=self.materials['Be12Ti'], region=outer_multiplier_region_5_6, cell_id=7)
-        # outer_multiplier_cell_7_8 = openmc.Cell(fill=self.materials['Be12Ti'], region=outer_multiplier_region_7_8, cell_id=8)
-        # outer_multiplier_cell_9_10 = openmc.Cell(fill=self.materials['Be12Ti'], region=outer_multiplier_region_9_10, cell_id=9)
-        # outer_multiplier_cell_11_12 = openmc.Cell(fill=self.materials['Be12Ti'], region=outer_multiplier_region_11_12, cell_id=10)
-
-        # 다른 메소드에서 사용할 수 있도록 self에 저장
-        self.first_wall_cell = cells['first_wall_cell']
-        self.first_wall_channel_cell = cells['first_wall_channel_cell']
-        self.tube_cell = cells['tube_cell']
-        self.pin_cell = cells['pin_cell']
-        self.breeder_cell = cells['breeder_cell']
-        self.outer_multiplier_cell = cells['outer_multiplier_cell']
-        self.helium_cell_inner = cells['inner_helium_cell']
-        self.helium_cell_outer = cells['outer_helium_cell']
-        self.void_cell = cells['void_cell']
-        # self.outer_mutiplier_cell_1_2 = outer_multiplier_cell_1_2
-        # self.outer_multiplier_cell_3_4 = outer_multiplier_cell_3_4
-        # self.outer_multiplier_cell_5_6 = outer_multiplier_cell_5_6
-        # self.outer_multiplier_cell_7_8 = outer_multiplier_cell_7_8
-        # self.outer_multiplier_cell_9_10 = outer_multiplier_cell_9_10
-        # self.outer_multiplier_cell_11_12 = outer_multiplier_cell_11_12
-
-        return cells
 
     # 해석 시작 전에 가능한 시각화
     def generate_geometry_2D_plots(self, plots_folder='plots'):
@@ -518,7 +253,7 @@ class NuclearFusion:
             print("\n\n\n--- Generating 2D geometry plots with axes using geometry.plot() ---")
 
             # Plot에 사용할 색상을 재료에 부여
-            color_assignment = {
+            material_color_map = {
                 self.materials['eurofer']: (128, 128, 128),  # 회색
                 self.materials['Be12Ti']: (0, 255, 0),  # 초록색
                 self.materials['breeder_pebble_mix']: (255, 0, 0),  # 빨간색
@@ -528,47 +263,70 @@ class NuclearFusion:
 
             print("1")
             # XY 평면 플롯 생성 및 저장
-            ax_xy = self.geometry.plot(
-                basis='xy',  # 자를 평면
-                origin=(self.tokamak_radius + (self.config['geometry']['tube']['length']/2.0), 0, 0),  # 그림의 원점
-                width=(50, 16),  # 그림의 가로/세로 폭 [cm]
-                pixels=(1000, 320),  # 그림의 가로/세로 해상도
-                color_by='material',
-                colors=color_assignment
+            # ax_xy = self.geometry.plot(
+            #     basis='xy',  # 자를 평면
+            #     origin=(self.tokamak_radius + (self.config['geometry']['tube']['length']/2.0), 0, 0),  # 그림의 원점
+            #     width=(50, 16),  # 그림의 가로/세로 폭 [cm]
+            #     pixels=(1000, 320),  # 그림의 가로/세로 해상도
+            #     color_by='material',
+            #     colors=material_color_map
+            # )
+            #
+            # ax_xy.show_overlaps = True
+            #
+            # # .plot() 메소드는 Matplotlib의 Axes 객체를 반환
+            # # 플롯에 넣을 그리드 추가 및 /plots 폴더로 이동
+            # ax_xy.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
+            # fig_xy = ax_xy.get_figure()
+            # fig_xy.savefig(os.path.join(plots_folder, 'geometry_2D_xy_LP.png'), dpi=600)  # 파일 저장 및 이동
+            # plt.close(fig_xy)
+            # print("XY geometry plot with axes saved.\n")
+
+            plot_xy = plot_axis_slice(
+                dagmc_file_or_trimesh_object=r'geometries/20250714_EU_DEMO_HCPB_LP_UNIT_CELL.h5m',
+                view_direction='x',
+                plane_origin=[1220, 0, 0],
             )
+            ax_xy = plot_xy.axes()[0]
 
-            ax_xy.show_overlaps = True
+            for patch in ax_xy.patches:
+                # 5. 각 patch의 라벨을 가져옵니다 (예: 'mat:eurofer').
+                full_label = patch.get_label()
 
-            # .plot() 메소드는 Matplotlib의 Axes 객체를 반환
-            # 플롯에 넣을 그리드 추가 및 /plots 폴더로 이동
-            ax_xy.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
-            fig_xy = ax_xy.get_figure()
-            fig_xy.savefig(os.path.join(plots_folder, 'geometry_2D_xy_LP.png'), dpi=600)  # 파일 저장 및 이동
-            plt.close(fig_xy)
-            print("XY geometry plot with axes saved.\n")
+                # 6. 라벨에서 'mat:' 부분을 제거하여 순수 재료 이름만 추출합니다.
+                if full_label.startswith("mat:"):
+                    material_name = full_label.split(':')[-1]
 
-            print("2")
-            # YZ 증배재 평면 플롯 생성 및 저장
-            ax_yz1 = self.geometry.plot(
-                basis='yz',  # 자를 평면
-                origin=(self.tokamak_radius
-                        + self.config['geometry']['first_wall']['armor_height']
-                        + self.config['geometry']['first_wall']['channel_height']
-                        + self.config['geometry']['pin']['impinging_plate']
-                        + self.config['geometry']['nozzle_to_target']
-                        + self.config['geometry']['pin']['nozzle_tip']
-                        + (self.config['geometry']['pin']['diagonal_height']), 0, 0),  # 그림의 원점
-                width=(15, 15),  # 그림의 가로/세로 폭 [cm]
-                pixels=(450, 450),  # 그림의 가로/세로 해상도
-                color_by='material',
-                colors=color_assignment
-            )
+                    # 7. 색상 맵에서 해당 재료의 색상을 찾아 patch의 면 색상(facecolor)으로 설정합니다.
+                    color = material_color_map.get(material_name)
+                    if color:
+                        patch.set_facecolor(color)
 
-            ax_yz1.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
-            fig_yz1 = ax_yz1.get_figure()
-            fig_yz1.savefig(os.path.join(plots_folder, 'geometry_2D_yz_LP.png'), dpi=600)  # 파일 저장 및 이동
-            plt.close(fig_yz1)
-            print("YZ geometry plot with axes saved.\n")
+            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_xy_LP.png'), dpi=600)
+
+
+            # print("2")
+            # # YZ 증배재 평면 플롯 생성 및 저장
+            # ax_yz1 = self.geometry.plot(
+            #     basis='yz',  # 자를 평면
+            #     origin=(self.tokamak_radius
+            #             + self.config['geometry']['first_wall']['armor_height']
+            #             + self.config['geometry']['first_wall']['channel_height']
+            #             + self.config['geometry']['pin']['impinging_plate']
+            #             + self.config['geometry']['nozzle_to_target']
+            #             + self.config['geometry']['pin']['nozzle_tip']
+            #             + (self.config['geometry']['pin']['diagonal_height']), 0, 0),  # 그림의 원점
+            #     width=(15, 15),  # 그림의 가로/세로 폭 [cm]
+            #     pixels=(450, 450),  # 그림의 가로/세로 해상도
+            #     color_by='material',
+            #     colors=material_color_map
+            # )
+            #
+            # ax_yz1.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
+            # fig_yz1 = ax_yz1.get_figure()
+            # fig_yz1.savefig(os.path.join(plots_folder, 'geometry_2D_yz_LP.png'), dpi=600)  # 파일 저장 및 이동
+            # plt.close(fig_yz1)
+            # print("YZ geometry plot with axes saved.\n")
 
             # print("3")
             # # YZ 증식재 평면 플롯 생성 및 저장
@@ -582,7 +340,7 @@ class NuclearFusion:
             #     width=(15, 15),  # 그림의 가로/세로 폭 [cm]
             #     pixels=(450, 450),  # 그림의 가로/세로 해상도
             #     color_by='material',
-            #     colors=color_assignment
+            #     colors=material_color_map
             # )
             #
             # ax_yz2.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
@@ -824,73 +582,50 @@ class NuclearFusion:
 
             self.tallies = []
 
-            # define_geometry에서 만든 모든 셀
-            all_cells = list(self.geometry.get_all_cells().values())
+            # Cubit에서 정의한 볼륨 이름 저장
+            target_pressure_tube = ["cell_Pressure_Tube"]
+            target_pin = ["cell_Pin"]
+            target_breeder = ["cell_Breeder"]
+            target_outer_multiplier = ["cell_Outer_Multiplier"]
+            target_structure = ["cell_Pressure_Tube", "cell_Pin"]
+            target_material = ["cell_Pressure_Tube", "cell_Pin", "cell_Breeder", "cell_Outer_Multiplier"]
 
-            # void cell과 He을 제외한 모든 셀
-            material_cells = [cell for cell in all_cells if
-                              cell.fill is not None and cell.fill is not self.materials['He']]
-
-            # 구조재 cell
-            structural_cells = [self.tube_cell, self.pin_cell]
-
-            # Filter의 CellFilter 정의를 위해 먼저 Cell 정의
-            all_cells_filter = openmc.CellFilter(all_cells)
-            material_cells_filter = openmc.CellFilter([c.id for c in material_cells])
-            breeder_cell_filter = openmc.CellFilter([self.breeder_cell.id])
-            # inner_multiplier_cell_filter = openmc.CellFilter([self.inner_multiplier_cell.id])
-            outer_multiplier_cell_filter = openmc.CellFilter([self.outer_multiplier_cell.id])
-            tube_cell_filter = openmc.CellFilter([self.tube_cell.id])
-            pin_cell_filter = openmc.CellFilter([self.pin_cell.id])
-            structural_cell_filter = openmc.CellFilter([c.id for c in structural_cells])
+            # Cubit 볼륨 이름으로 cell filter 정의
+            pressure_tube_cell_filter = openmc.CellFilter(target_pressure_tube)
+            pin_cell_filter = openmc.CellFilter(target_pin)
+            breeder_cell_filter = openmc.CellFilter(target_breeder)
+            outer_multiplier_cell_filter = openmc.CellFilter(target_outer_multiplier)
+            structure_cells_filter = openmc.CellFilter(target_structure)
+            material_cells_filter = openmc.CellFilter(target_material)
 
             # 에너지 filter
             energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
             energy_filter = openmc.EnergyFilter(energy_bins)
 
-            # 형상 최외곽 표면 filter
-            # boundary_surfaces = [s for s in self.geometry.get_all_surfaces().values() if s.boundary_type == "vacuum"]
-            # surface_filter = openmc.SurfaceFilter(boundary_surfaces)
 
             '''여기부터는 평균 Tally'''
 
             # 사용자가 알기 쉬운 이름 설정
-            # tally_flux = openmc.Tally(name='flux')
             tally_tbr = openmc.Tally(name='tbr')
-            # tally_dpa = openmc.Tally(name='dpa')
-            # tally_heating = openmc.Tally(name='heating')
             tally_multiplying = openmc.Tally(name='multiplication')
-            # tally_leakage = openmc.Tally(name='leakage')
 
             # Score 정의 : 무엇을 측정?
             # https://docs.openmc.org/en/stable/usersguide/tallies.html        : OpenMC 내장 Tally
             # https://www.oecd-nea.org/dbdata/data/manual-endf/endf102_MT.pdf  : ENDF MT list
-            # tally_flux.scores = ['flux']
             tally_tbr.scores = ['(n,Xt)']  # 'H3-production' 으로 써도 됨. (X: wildcard) MT number: 205
             tally_tbr.nuclides = ['Li6', 'Li7']  # Li 원자에 대해서 계산
-            # tally_dpa.scores = ['damage-energy']  # MT reaction number: 444
-            # tally_dpa.nuclides = ['Fe54', 'Fe56', 'Fe57', 'Fe58']  # Fe 원자에 대해서 계산
-            # tally_heating.scores = ['heating']
             tally_multiplying.scores = ['(n,2n)']
             tally_multiplying.nuclides = ['Be9']
-            # tally_leakage.scores = ['current']
 
             # Filter 정의 : Score를 언제/어디서/어떤 입자를 측정?
-            # tally_flux.filters = [material_cells_filter]
             tally_tbr.filters = [breeder_cell_filter]
-            # tally_dpa.filters = [structural_cell_filter]
-            # tally_heating.filters = [all_cells_filter]
             tally_multiplying.filters = [outer_multiplier_cell_filter]
-            # tally_leakage.filters = [surface_filter]
 
 
             # tallies에 모두 추가
-            # self.tallies.append(tally_flux)
             self.tallies.append(tally_tbr)
-            # self.tallies.append(tally_dpa)
-            # self.tallies.append(tally_heating)
             self.tallies.append(tally_multiplying)
-            # self.tallies.append(tally_leakage)
+
 
             '''여기부터는 local Tally'''
 
@@ -911,7 +646,6 @@ class NuclearFusion:
             mesh_z_thickness = mesh_config['z_thickness']
 
             mesh_y_min = -mesh_config['length_y'] / 2.0  # 핀 반경보다 조금 더 크게
-            # mesh_y_min = 0.0
             mesh_z_min = mesh_z_center - (mesh_z_thickness / 2.0)
 
             mesh_y_max = +mesh_config['length_y'] / 2.0
@@ -928,7 +662,6 @@ class NuclearFusion:
 
             tally_local_flux = openmc.Tally(name='local_flux')
             tally_local_tbr = openmc.Tally(name='local_tbr')
-            # tally_local_dpa = openmc.Tally(name='local_dpa')
 
             tally_local_heating_neutron = openmc.Tally(name='local_heating_neutron')
             tally_local_heating_photon = openmc.Tally(name='local_heating_photon')
@@ -946,7 +679,6 @@ class NuclearFusion:
 
             tally_local_flux.scores = ['flux']
             tally_local_tbr.scores = ['(n,Xt)']
-            # tally_local_dpa.scores = ['damage-energy']
 
             tally_local_heating_neutron.scores = ['heating']
             tally_local_heating_photon.scores = ['heating']
@@ -963,18 +695,16 @@ class NuclearFusion:
             tally_local_multiplication.scores = ['(n,2n)']
 
             tally_local_tbr.nuclides = ['Li6', 'Li7']
-            # tally_local_dpa.nuclides = ['Fe54', 'Fe56', 'Fe57', 'Fe58']
             tally_local_multiplication.nuclides = ['Be9']
 
             tally_local_flux.filters = [mesh_filter, material_cells_filter, openmc.ParticleFilter(['neutron'])]
             tally_local_tbr.filters = [mesh_filter, breeder_cell_filter]
-            # tally_local_dpa.filters = [mesh_filter, structural_cell_filter]
 
             tally_local_heating_neutron.filters = [mesh_filter, material_cells_filter, openmc.ParticleFilter(['neutron'])]
             tally_local_heating_photon.filters = [mesh_filter, material_cells_filter, openmc.ParticleFilter(['photon'])]
 
-            tally_local_heating_tube_neutron.filters = [mesh_filter, tube_cell_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_tube_photon.filters = [mesh_filter, tube_cell_filter, openmc.ParticleFilter(['photon'])]
+            tally_local_heating_tube_neutron.filters = [mesh_filter, pressure_tube_cell_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_heating_tube_photon.filters = [mesh_filter, pressure_tube_cell_filter, openmc.ParticleFilter(['photon'])]
             tally_local_heating_pin_neutron.filters = [mesh_filter, pin_cell_filter, openmc.ParticleFilter(['neutron'])]
             tally_local_heating_pin_photon.filters = [mesh_filter, pin_cell_filter, openmc.ParticleFilter(['photon'])]
             tally_local_heating_breeder_neutron.filters = [mesh_filter, breeder_cell_filter, openmc.ParticleFilter(['neutron'])]
@@ -1056,7 +786,7 @@ class NuclearFusion:
                 pbar.update(1)
 
                 pbar.set_description("\nDefining Tallies")
-                self.define_tallies()
+                # self.define_tallies()
                 status_window.update_task_status("Tallies Definition", "OK! ✓", "green")
                 pbar.update(1)
 
