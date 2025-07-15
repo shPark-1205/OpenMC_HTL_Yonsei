@@ -38,6 +38,13 @@ bounding:
   y_width: 100.0
 
 
+# 형상 2D plot용 좌표
+2D_plot:
+  x_coord: 1221.0
+  y_coord: 0.0
+  z_coord: 0.0
+
+
 # 후처리용 격자 설정 [cm or 개]
 mesh:
   length_x: 46.2 # First wall부터의 x 방향 길이 (462 mm)
