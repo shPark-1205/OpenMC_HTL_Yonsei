@@ -264,7 +264,7 @@ class NuclearFusion:
             plot_xy = plot_axis_slice(
                 dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
                 view_direction='-z',
-                plane_origin=[1220, 0, 0],
+                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
             )
 
             plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
@@ -274,12 +274,11 @@ class NuclearFusion:
             plot_yz = plot_axis_slice(
                 dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
                 view_direction='x',
-                plane_origin=[1220, 0, 0],
+                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
             )
 
             plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
             print("YZ geometry plot with axes saved.\n")
-
 
 
         except Exception as e:
@@ -719,7 +718,7 @@ class NuclearFusion:
                 pbar.update(1)
 
                 pbar.set_description("\nDefining Tallies")
-                # self.define_tallies()
+                self.define_tallies()
                 status_window.update_task_status("Tallies Definition", "OK! ✓", "green")
                 pbar.update(1)
 

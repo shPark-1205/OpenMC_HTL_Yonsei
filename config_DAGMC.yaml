@@ -29,7 +29,6 @@ geometry:
   h5m_path: '/opt/geometries/20250714_EU_DEMO_HCPB_LP_UNIT_CELL.h5m'
 
 
-
 # DAGMC 형상 감싸는 박스
 bounding:
   x_max: 3000.0
@@ -50,8 +49,8 @@ mesh:
   length_x: 46.2 # First wall부터의 x 방향 길이 (462 mm)
   length_y: 16.0 # y 방향 길이 (160 mm)
   z_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  z_thickness: 0.01 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 4620 # x 방향 격자 개수
-  division_y: 1600 # y 방향 격자 개수
+  z_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
+  division_x: 462 # x 방향 격자 개수
+  division_y: 160 # y 방향 격자 개수
   division_z: 1 # z 방향 격자 개수
 
