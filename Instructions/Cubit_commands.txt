@@ -32,3 +32,5 @@ group "mat:breeder_pebble_mix" add volume 6
 group "mat:tungsten" add volume 2
 
 # 그룹 생성 후 삼각형 격자 생성
+surface all scheme trimesh
+mesh surface all
