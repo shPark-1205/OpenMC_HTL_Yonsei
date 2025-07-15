@@ -27,40 +27,40 @@ geometry:
   tokamak_minor_radius: 292.258
   pitch: 10.825317547305483084546539634412 # 육각형 격자 pitch (실제 핀-핀 사이 거리 아닌 것에 주의!)
 
-  tube: # Pressure tube
-    outer_radius: 3.9
-    inner_radius: 3.5
-    length: 46.2
-
-  pin_outer: # 동심관 쪽 핀
-    outer_radius: 3.3
-    inner_radius: 3.0
-
-  pin_inner: # 노즐 쪽 핀
-    outer_radius: 1.4
-    inner_radius: 0.8
-  
-  pin_diagonal:
-    inner_radius: 1.7696
-    outer_radius: 2.0
-    diagonal_angle: 0.2281 # 라디안
-  
-  pin:
-    impinging_plate: 0.4 # 충돌판 두께
-    nozzle_tip: 0.3 # 핀 노즐 팁 두께
-    diagonal_height: 5.3 # 노즐 대각선 부분 사이 거리
-  
-  first_wall:
-    armor_height: 0.2 # W 코팅 두께
-    channel_height: 2.0 # 채널 총 두께 (현재는 헬륨 채널 고려 X)
-  
-  outer_multiplier:
-    tube_gap: 0.1 # Pressure tube와 핀 외부 증배재 사이의 간격 (Purge)
-    impinging_plate_gap: 0.5 # 충돌면과 핀 외부 증배재 사이의 간격 (Purge)
-    length: 40.0 # 핀 외부 증배재의 축 방향 길이
-    pitch: 0.5 # 핀 외부 증배재 사이의 간격 (Purge)
-  
-  nozzle_to_target: 1.0 # H/D 에서의 H [cm]
+#  tube: # Pressure tube
+#    outer_radius: 3.9
+#    inner_radius: 3.5
+#    length: 46.2
+#
+#  pin_outer: # 동심관 쪽 핀
+#    outer_radius: 3.3
+#    inner_radius: 3.0
+#
+#  pin_inner: # 노즐 쪽 핀
+#    outer_radius: 1.4
+#    inner_radius: 0.8
+#
+#  pin_diagonal:
+#    inner_radius: 1.7696
+#    outer_radius: 2.0
+#    diagonal_angle: 0.2281 # 라디안
+#
+#  pin:
+#    impinging_plate: 0.4 # 충돌판 두께
+#    nozzle_tip: 0.3 # 핀 노즐 팁 두께
+#    diagonal_height: 5.3 # 노즐 대각선 부분 사이 거리
+#
+#  first_wall:
+#    armor_height: 0.2 # W 코팅 두께
+#    channel_height: 2.0 # 채널 총 두께 (현재는 헬륨 채널 고려 X)
+#
+#  outer_multiplier:
+#    tube_gap: 0.1 # Pressure tube와 핀 외부 증배재 사이의 간격 (Purge)
+#    impinging_plate_gap: 0.5 # 충돌면과 핀 외부 증배재 사이의 간격 (Purge)
+#    length: 40.0 # 핀 외부 증배재의 축 방향 길이
+#    pitch: 0.5 # 핀 외부 증배재 사이의 간격 (Purge)
+#
+#  nozzle_to_target: 1.0 # H/D 에서의 H [cm]
 
 # 후처리용 격자 설정 [cm or 개]
 mesh:
