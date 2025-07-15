@@ -1,6 +1,4 @@
-# Simulation_Builder_LP.py
-
-# DAGMC TEST
+# Simulation_Builder_DAGMC.py
 
 import openmc
 import numpy as np
@@ -207,15 +205,15 @@ class NuclearFusion:
         print("\n\n\nDefining geometry with DAGMC from .h5m file...")
 
         # CAD 형상을 충분히 감쌀 수 있는 크기의 경계 설정
-        z_width = 100.0
-        y_height = 100.0
-        x_min = -100.0
-        x_max = 5000.0
+        z_height = self.config['bounding']['z_height']
+        y_width = self.config['bounding']['y_width']
+        x_min = self.config['bounding']['x_min']
+        x_max = self.config['bounding']['x_max']
 
         # 최외곽 경계 사각기둥 생성
         prism = openmc.model.RectangularPrism(
-            width=z_width,
-            height=y_height,
+            width=y_width,
+            height=z_height,
             axis='x',
             origin=(0.0, 0.0),
             boundary_type='periodic'
@@ -225,11 +223,12 @@ class NuclearFusion:
         x_min_plane = openmc.XPlane(x0=x_min, boundary_type='vacuum')
         x_max_plane = openmc.XPlane(x0=x_max, boundary_type='vacuum')
 
+        # 최외곽 닫힌 육각 기둥
         final_region = -prism & +x_min_plane & -x_max_plane
 
         # DAGMC를 위해 형상 불러오기
-        filename = r'geometries/20250714_EU_DEMO_HCPB_LP_UNIT_CELL.h5m'
-        dag_universe = openmc.DAGMCUniverse(filename=filename, auto_geom_ids=False)
+        h5m_path = self.config['geometry']['h5m_path']
+        dag_universe = openmc.DAGMCUniverse(filename=h5m_path, auto_geom_ids=True)
 
         root_cell = openmc.Cell(
             name='root_cell',
@@ -262,92 +261,26 @@ class NuclearFusion:
             }
 
             print("1")
-            # XY 평면 플롯 생성 및 저장
-            # ax_xy = self.geometry.plot(
-            #     basis='xy',  # 자를 평면
-            #     origin=(self.tokamak_radius + (self.config['geometry']['tube']['length']/2.0), 0, 0),  # 그림의 원점
-            #     width=(50, 16),  # 그림의 가로/세로 폭 [cm]
-            #     pixels=(1000, 320),  # 그림의 가로/세로 해상도
-            #     color_by='material',
-            #     colors=material_color_map
-            # )
-            #
-            # ax_xy.show_overlaps = True
-            #
-            # # .plot() 메소드는 Matplotlib의 Axes 객체를 반환
-            # # 플롯에 넣을 그리드 추가 및 /plots 폴더로 이동
-            # ax_xy.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
-            # fig_xy = ax_xy.get_figure()
-            # fig_xy.savefig(os.path.join(plots_folder, 'geometry_2D_xy_LP.png'), dpi=600)  # 파일 저장 및 이동
-            # plt.close(fig_xy)
-            # print("XY geometry plot with axes saved.\n")
-
             plot_xy = plot_axis_slice(
-                dagmc_file_or_trimesh_object=r'geometries/20250714_EU_DEMO_HCPB_LP_UNIT_CELL.h5m',
+                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
+                view_direction='-z',
+                plane_origin=[1220, 0, 0],
+            )
+
+            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
+            print("XY geometry plot with axes saved.\n")
+
+            print("2")
+            plot_yz = plot_axis_slice(
+                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
                 view_direction='x',
                 plane_origin=[1220, 0, 0],
             )
-            ax_xy = plot_xy.axes()[0]
 
-            for patch in ax_xy.patches:
-                # 5. 각 patch의 라벨을 가져옵니다 (예: 'mat:eurofer').
-                full_label = patch.get_label()
-
-                # 6. 라벨에서 'mat:' 부분을 제거하여 순수 재료 이름만 추출합니다.
-                if full_label.startswith("mat:"):
-                    material_name = full_label.split(':')[-1]
-
-                    # 7. 색상 맵에서 해당 재료의 색상을 찾아 patch의 면 색상(facecolor)으로 설정합니다.
-                    color = material_color_map.get(material_name)
-                    if color:
-                        patch.set_facecolor(color)
-
-            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_xy_LP.png'), dpi=600)
+            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
+            print("YZ geometry plot with axes saved.\n")
 
 
-            # print("2")
-            # # YZ 증배재 평면 플롯 생성 및 저장
-            # ax_yz1 = self.geometry.plot(
-            #     basis='yz',  # 자를 평면
-            #     origin=(self.tokamak_radius
-            #             + self.config['geometry']['first_wall']['armor_height']
-            #             + self.config['geometry']['first_wall']['channel_height']
-            #             + self.config['geometry']['pin']['impinging_plate']
-            #             + self.config['geometry']['nozzle_to_target']
-            #             + self.config['geometry']['pin']['nozzle_tip']
-            #             + (self.config['geometry']['pin']['diagonal_height']), 0, 0),  # 그림의 원점
-            #     width=(15, 15),  # 그림의 가로/세로 폭 [cm]
-            #     pixels=(450, 450),  # 그림의 가로/세로 해상도
-            #     color_by='material',
-            #     colors=material_color_map
-            # )
-            #
-            # ax_yz1.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
-            # fig_yz1 = ax_yz1.get_figure()
-            # fig_yz1.savefig(os.path.join(plots_folder, 'geometry_2D_yz_LP.png'), dpi=600)  # 파일 저장 및 이동
-            # plt.close(fig_yz1)
-            # print("YZ geometry plot with axes saved.\n")
-
-            # print("3")
-            # # YZ 증식재 평면 플롯 생성 및 저장
-            # ax_yz2 = self.geometry.plot(
-            #     basis='yz',  # 자를 평면
-            #     origin=(self.tokamak_radius
-            #             + self.config['geometry']['first_wall']['armor_height']
-            #             + self.config['geometry']['first_wall']['channel_height']
-            #             + self.config['geometry']['outer_multiplier']['impinging_plate_gap']
-            #             + (self.config['geometry']['outer_multiplier']['length']*0.7), 0, 0),  # 그림의 원점
-            #     width=(15, 15),  # 그림의 가로/세로 폭 [cm]
-            #     pixels=(450, 450),  # 그림의 가로/세로 해상도
-            #     color_by='material',
-            #     colors=material_color_map
-            # )
-            #
-            # ax_yz2.grid(True, linestyle='--', alpha=0.5)  # 플롯 그리드
-            # fig_yz2 = ax_yz2.get_figure()
-            # fig_yz2.savefig(os.path.join(plots_folder, 'geometry_2D_yz_breeder.png'), dpi=600)  # 파일 저장 및 이동
-            # plt.close(fig_yz2)
-            # print("YZ-3 geometry plot with axes saved.\n")
 
         except Exception as e:
             print(f"\n\nError in generate_geometry_2d_plots method: {e}\n")
