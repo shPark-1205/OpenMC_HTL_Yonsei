@@ -1,4 +1,4 @@
-# Run_Simulation_LP.py
+# Run_Simulation_DAGMC.py
 
 import sys
 import os
