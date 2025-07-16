@@ -562,13 +562,16 @@ class NuclearFusion:
 
             self.tallies = []
 
-            # Cubit에서 정의한 볼륨 이름 저장
-            target_pressure_tube = ["cell_Pressure_Tube"]
-            target_pin = ["cell_Pin"]
-            target_breeder = ["cell_Breeder"]
-            target_outer_multiplier = ["cell_Outer_Multiplier"]
-            target_structure = ["cell_Pressure_Tube", "cell_Pin"]
-            target_material = ["cell_Pressure_Tube", "cell_Pin", "cell_Breeder", "cell_Outer_Multiplier"]
+            # Cell 별로 지정된 재료를 filter로 사용
+            eurofer_pressure_tube_object = self.materials['eurofer_pressure_tube']
+            eurofer_pin_object = self.materials['eurofer_pin']
+            eurofer_first_wall_channel_object = self.materials['eurofer_first_wall_channel']
+            he_inner_object = self.materials['He_inner']
+            he_outer_object = self.materials['He_outer']
+            breeder_object = self.materials['breeder_pebble_mix']
+            be12ti_inner_object = self.materials['Be12Ti_inner']
+            be12ti_outer_object = self.materials['Be12Ti_outer']
+            tungsten_object = self.materials['tungsten']
 
             # Cubit 볼륨 이름으로 cell filter 정의
             pressure_tube_cell_filter = openmc.CellFilter(target_pressure_tube)
