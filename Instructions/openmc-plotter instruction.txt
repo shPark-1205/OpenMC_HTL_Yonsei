@@ -13,3 +13,10 @@
 	--> 입력 시 3번에서 연결한 나의 로컬 폴더가 보임.
 8. openmc-plotter
 	--> Container 상에서 openmc-plotter 실행
+
+
+** 만약 VcXsrv를 사용하고 있는데 openmc-plotter의 창 크기 조절이 안되거나 버튼 클릭에 반응이 없거나 등 문제가 있으면,
+9. MobaXterm 설치
+10. MobaXterm 실행
+11. MobaXterm 창이 켜진 상태에서 최소화 해놓기.
+12. 2번부터 다시 실행
