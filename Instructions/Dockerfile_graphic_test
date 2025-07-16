@@ -1,0 +1,8 @@
+FROM ubuntu:24.04
+RUN apt-get update && apt-get install -y x11-apps
+CMD ["xeyes"]
+
+# CMD 창에...
+# docker build -f Dockerfile_graphic_test -t xeyes-test .
+# docker run -it --rm -e "DISPLAY=host.docker.internal:0 xeyes-test
+# 입력했을 때 마우스 커서 따라서 눈동자 움직이면 원격 그래픽 성공!
