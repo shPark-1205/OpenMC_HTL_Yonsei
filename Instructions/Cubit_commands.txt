@@ -25,9 +25,12 @@ volume 7 name "cell_Inner_He"
 volume 8 name "cell_Outer_Multiplier"
 
 # 그룹 생성
-group "mat:eurofer" add volume 3 4 5
-group "mat:He" add volume 1 7
-group "mat:Be12Ti" add volume 8
+group "mat:eurofer_pressure_tube" add volume 4
+group "mat:eurofer_pin" add volume 5
+group "mat:eurofer_first_wall_channel" add volume 3
+group "mat:He_inner" add volume 7
+group "mat:He_outer" add volume 1
+group "mat:Be12Ti_outer" add volume 8
 group "mat:breeder_pebble_mix" add volume 6
 group "mat:tungsten" add volume 2
 
