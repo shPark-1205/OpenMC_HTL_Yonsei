@@ -24,16 +24,36 @@ volume 6 name "cell_Breeder"
 volume 7 name "cell_Inner_He"
 volume 8 name "cell_Outer_Multiplier"
 
-# 그룹 생성
-group "mat:eurofer_pressure_tube" add volume 4
-group "mat:eurofer_pin" add volume 5
-group "mat:eurofer_first_wall_channel" add volume 3
-group "mat:He_inner" add volume 7
-group "mat:He_outer" add volume 1
-group "mat:Be12Ti_outer" add volume 8
-group "mat:breeder_pebble_mix" add volume 6
-group "mat:tungsten" add volume 2
+# 재료 생성 (OpenMC에서 정의한 이름과 똑같아야 함.)
+create material "eurofer_pressure_tube" property_group "CUBIT-ABAQUS"
+create material "eurofer_pin" property_group "CUBIT-ABAQUS"
+create material "eurofer_first_wall_channel" property_group "CUBIT-ABAQUS"
+create material "He_inner" property_group "CUBIT-ABAQUS"
+create material "He_outer" property_group "CUBIT-ABAQUS"
+create material "tungsten" property_group "CUBIT-ABAQUS"
+create material "breeder_pebble_mix" property_group "CUBIT-ABAQUS"
+create material "Be12Ti_outer" property_group "CUBIT-ABAQUS"
 
-# 그룹 생성 후 삼각형 격자 생성
-surface all scheme trimesh
-mesh surface all
+# 블록 생성
+block 1 add volume 1
+block 2 add volume 2
+block 3 add volume 3
+block 4 add volume 4
+block 5 add volume 5
+block 6 add volume 6
+block 7 add volume 7
+block 8 add volume 8
+
+# 블록에 재료 할당
+block 1 material "He_outer"
+block 2 material "tungsten"
+block 3 material "eurofer_first_wall_channel"
+block 4 material "eurofer_pressure_tube"
+block 5 material "eurofer_pin"
+block 6 material "breeder_pebble_mix"
+block 7 material "He_inner"
+block 8 material "Be12Ti_outer"
+
+
+# 그룹 생성 후 격자 생성
+# GUI로 하는 게 편함.
