@@ -130,9 +130,10 @@ class NuclearFusion:
             openmc_materials_list.append(Be12Ti_mat)
 
             # __init__ 메소드에서 만들었던 재료 목록 가져오기
-            for config in self.material_configs:
-                mat_name = config['name']
-                mat_kwargs = config['kwargs']
+            for mat_config in self.material_configs:
+                mat_id = mat_config['id']
+                mat_name = mat_config['name']
+                mat_kwargs = mat_config['kwargs']
 
                 print(f"\nLoading base material: {mat_name} with parameters {mat_kwargs}...")
 
