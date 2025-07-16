@@ -143,11 +143,58 @@ class NuclearFusion:
                 # nmm 물성을 openmc 물성으로 저장
                 openmc_mat = nmm_mat.openmc_material
 
-                # OpenMC Material 객체와 nmm Material 객체를 각각 저장
-                self.materials[mat_name] = openmc_mat
-                nmm_materials_temp[mat_name] = nmm_mat  # 혼합을 위해 nmm 객체 저장
-                openmc_materials_list.append(openmc_mat)
-                print(f"Material {mat_name} loaded (OpenMC ID: {openmc_mat.id}).")
+                if mat_name == 'eurofer':
+                    print(f"Cloning material: {mat_name} for different components...\n")
+
+                    # Pressure tube 용
+                    eurofer_pressure_tube_mat = openmc_mat.clone()
+                    eurofer_pressure_tube_mat.id = 101
+                    eurofer_pressure_tube_mat.name = 'eurofer_pressure_tube'
+                    self.materials['eurofer_pressure_tube'] = eurofer_pressure_tube_mat
+                    openmc_materials_list.append(eurofer_pressure_tube_mat)
+                    print(f"  -> Created 'eurofer_pressure_tube' (ID: {eurofer_pressure_tube_mat.id})")
+
+                    # Pin 용
+                    eurofer_pin_mat = openmc_mat.clone()
+                    eurofer_pin_mat.id = 102
+                    eurofer_pin_mat.name = 'eurofer_pin'
+                    self.materials['eurofer_pin'] = eurofer_pin_mat
+                    openmc_materials_list.append(eurofer_pin_mat)
+                    print(f"  -> Created 'eurofer_pin' (ID: {eurofer_pin_mat.id})")
+
+                    # First wall channel 용
+                    eurofer_first_wall_channel_mat = openmc_mat.clone()
+                    eurofer_first_wall_channel_mat.id = 103
+                    eurofer_first_wall_channel_mat.name = 'eurofer_first_wall_channel'
+                    self.materials['eurofer_first_wall_channel'] = eurofer_first_wall_channel_mat
+                    openmc_materials_list.append(eurofer_first_wall_channel_mat)
+                    print(f"  -> Created 'eurofer_first_wall_channel' (ID: {eurofer_pin_mat.id})")
+
+                elif mat_name == 'He':
+                    print(f"Cloning material: {mat_name} for different components...\n")
+
+                    # Inner He 용
+                    he_inner_mat = openmc_mat.clone()
+                    he_inner_mat.id = 201
+                    he_inner_mat.name = 'He_inner'
+                    self.materials['He_inner'] = he_inner_mat
+                    openmc_materials_list.append(he_inner_mat)
+                    print(f"  -> Created 'He_inner' (ID: {he_inner_mat.id})")
+
+                    # Outer He 용
+                    he_outer_mat = openmc_mat.clone()
+                    he_outer_mat.id = 202
+                    he_outer_mat.name = 'He_outer'
+                    self.materials['He_outer'] = he_outer_mat
+                    openmc_materials_list.append(he_outer_mat)
+                    print(f"  -> Created 'He_outer' (ID: {he_outer_mat.id})")
+
+                else:
+                    openmc_mat.id = mat_id
+                    self.materials[mat_name] = openmc_mat
+                    nmm_materials_temp[mat_name] = nmm_mat
+                    openmc_materials_list.append(openmc_mat)
+                    print(f"Material {mat_name} loaded (OpenMC ID: {openmc_mat.id}).")
 
             # 위에서 생성한 기본 재료들을 사용하여 혼합물 생성
             print("\nCreating mixed material (Li4SiO4 + Li2TiO3)...")
