@@ -1,0 +1,56 @@
+# OpenMC 시뮬레이션 절체 설정 관리하는 파일
+# 이 파일 내의 값만 수정하여 다양한 조건 해석 가능
+
+# 해석 설정
+simulation:
+  particles: 10000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  batches: 30 # 해석의 iteration
+  inactive: 0
+  threads: 24 # 컴퓨터 코어 수 (미설정시 최대 코어로 자동 설정)
+
+# 재료 설정
+materials:
+  breeder:
+    li_enrichment: 60.0
+    packing_fraction: 0.64
+    mixture_Li4SiO4: 0.65
+    mixture_Li2TiO3: 0.35
+    
+  he:
+    temperature: 723 # [K]
+    pressure: 8.0E+6 # [Pa]
+
+
+# 형상 설정 [cm]
+geometry:
+  tokamak_major_radius: 906.0
+  tokamak_minor_radius: 292.258
+  pitch: 10.825317547305483084546539634412 # 육각형 격자 pitch (실제 핀-핀 사이 거리 아닌 것에 주의!)
+  h5m_path: '/opt/geometries/20250715_EU_DEMO_HCPB_LP_UNIT_CELL.h5m'
+
+
+# DAGMC 형상 감싸는 박스
+bounding:
+  x_max: 3000.0
+  x_min: -100.0
+  z_height: 100.0
+  y_width: 100.0
+
+
+# 형상 2D plot용 좌표
+2D_plot:
+  x_coord: 1221.0
+  y_coord: 0.0
+  z_coord: 0.0
+
+
+# 후처리용 격자 설정 [cm or 개]
+mesh:
+  length_x: 46.2 # First wall부터의 x 방향 길이 (462 mm)
+  length_y: 16.0 # y 방향 길이 (160 mm)
+  z_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
+  z_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
+  division_x: 462 # x 방향 격자 개수
+  division_y: 160 # y 방향 격자 개수
+  division_z: 1 # z 방향 격자 개수
+

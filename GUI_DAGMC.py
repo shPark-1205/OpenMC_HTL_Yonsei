@@ -1,4 +1,4 @@
-# GUI_LP.py
+# GUI_DAGMC.py
 
 import tkinter as tk
 from tkinter import font
