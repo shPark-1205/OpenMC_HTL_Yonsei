@@ -53,22 +53,24 @@ class NuclearFusion:
 
             # 해석에 사용할 재료를 먼저 생성해야 함. 재료가 nmm에 정의되어 있는 이름대로 작성
             self.material_configs = [
-                {'name': 'eurofer', 'kwargs': {}},
-                {'name': 'He', 'kwargs': {
+                {'id': 100, 'name': 'eurofer', 'kwargs': {}},
+
+                # 유체는 온도/압력 정의 필수
+                {'id': 200, 'name': 'He', 'kwargs': {
                     'temperature': self.config['materials']['he']['temperature'],
                     'pressure': self.config['materials']['he']['pressure']
-                }},  # 유체는 온도/압력 정의 필수
-                {'name': 'Li4SiO4', 'kwargs': {
-                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
-                    'packing_fraction': self.config['materials']['breeder']['packing_fraction'],
                 }},
-                {'name': 'Li2TiO3', 'kwargs': {
-                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
-                    'packing_fraction': self.config['materials']['breeder']['packing_fraction'],
-                }},
+                {'id': 301, 'name': 'tungsten', 'kwargs': {}},
+
                 # 증식재의 Li6 enrichment와 packing factor 정의 가능
-                # {'name': 'Be12Ti', 'kwargs': {}},
-                {'name': 'tungsten', 'kwargs': {}},
+                {'id': 402, 'name': 'Li4SiO4', 'kwargs': {
+                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
+                    'packing_fraction': self.config['materials']['breeder']['packing_fraction'],
+                }},
+                {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
+                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
+                    'packing_fraction': self.config['materials']['breeder']['packing_fraction'],
+                }},
             ]
 
             # 사용할 모든 재료를 openmc.Materia 객체로 저장할 딕셔너리
@@ -95,7 +97,10 @@ class NuclearFusion:
 
             # 해석 후 후처리할 것들을 묶어 놓는 바구니
             self.tallies = []
-
+            
+            # Mesh Tally 설정 시 Cell 이름과 ID 매칭 용도
+            self.cell_name_to_id = {}
+            
             # Docker image 안에 OpenMC 공식 library(ENDF/B-VII.1)를 넣어 놨음.
             # https://openmc.org/official-data-libraries/
             openmc.config['cross_sections'] = r'/app/data/endfb-vii.1-hdf5/cross_sections.xml'
@@ -108,7 +113,7 @@ class NuclearFusion:
     def define_materials(self):
         try:
             # neutronics_material_maker(nmm) 모듈을 통해 미리 정의된 물성을 사용
-            print("\n\n\nDefining materials using neutronics_material_maker...")
+            print("\n\n\nDefining materials using neutronics_material_maker and OpenMC built-in modules...")
 
             self.materials = {}
 
@@ -117,17 +122,6 @@ class NuclearFusion:
 
             # 증식재 혼합물 만들기 위해 임시로 저장하는 곳
             nmm_materials_temp = {}
-
-            # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
-            Be12Ti_mat = openmc.Material(name='Be12Ti')
-            Be12Ti_mat.add_elements_from_formula('Be12Ti')
-            Be12Ti_mat.set_density('g/cm3', 2.27)
-            Be12Ti_mat.temperature = 400
-
-            # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
-            Be12Ti_mat.add_s_alpha_beta('c_Be') # cross_sections.xml 파일에 이름 있음.
-            self.materials['Be12Ti'] = Be12Ti_mat
-            openmc_materials_list.append(Be12Ti_mat)
 
             # __init__ 메소드에서 만들었던 재료 목록 가져오기
             for mat_config in self.material_configs:
@@ -213,10 +207,31 @@ class NuclearFusion:
 
             # 새로 만든 혼합물을 재료 딕셔너리와 리스트에 추가
             mixed_openmc_material = mixed_breeder_material.openmc_material
+            mixed_openmc_material.id = 401
+            mixed_openmc_material.name = 'breeder_pebble_mix'
             self.materials['breeder_pebble_mix'] = mixed_openmc_material
             openmc_materials_list.append(mixed_openmc_material)
 
-            print(f"Mixed material 'breeder_pebble_mix' created (OpenMC ID: {mixed_openmc_material.id}).")
+            print(f"Mixed material breeder_pebble_mix created (OpenMC ID: {mixed_openmc_material.id}).")
+
+            # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
+            print(f"\nCreating material: Be12Ti...")
+            Be12Ti_inner_mat = openmc.Material(name='Be12Ti_inner', material_id=501)
+            Be12Ti_inner_mat.add_elements_from_formula('Be12Ti')
+            Be12Ti_inner_mat.set_density('g/cm3', 2.27)
+            Be12Ti_inner_mat.temperature = 400
+
+            # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
+            Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
+            self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
+            openmc_materials_list.append(Be12Ti_inner_mat)
+
+            print(f"\nCloning material: Be12Ti...")
+            Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
+            Be12Ti_outer_mat.id = 502
+            Be12Ti_outer_mat.name = 'Be12Ti_outer'
+            self.materials['Be12Ti_outer'] = Be12Ti_outer_mat
+            openmc_materials_list.append(Be12Ti_outer_mat)
 
             # 모든 OpenMC Material 객체들을 openmc.Materials 컬렉션으로 묶음
             self.all_materials_collection = openmc.Materials(openmc_materials_list)
@@ -276,6 +291,8 @@ class NuclearFusion:
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
+
+        # auto_geom_ids를 활성화해야 OpenMC 기본 ID랑 충돌하지 않는 것 같음.
         dag_universe = openmc.DAGMCUniverse(filename=h5m_path, auto_geom_ids=True)
 
         root_cell = openmc.Cell(
@@ -292,46 +309,6 @@ class NuclearFusion:
         geometry_obj.export_to_xml()
         print("\ngeometry.xml exported successfully.\n")
         self.geometry = geometry_obj
-
-    # 해석 시작 전에 가능한 시각화
-    def generate_geometry_2D_plots(self, plots_folder='plots'):
-
-        try:
-            print("\n\n\n--- Generating 2D geometry plots with axes using geometry.plot() ---")
-
-            # Plot에 사용할 색상을 재료에 부여
-            material_color_map = {
-                self.materials['eurofer']: (128, 128, 128),  # 회색
-                self.materials['Be12Ti']: (0, 255, 0),  # 초록색
-                self.materials['breeder_pebble_mix']: (255, 0, 0),  # 빨간색
-                self.materials['He']: (0, 0, 255),  # 파란색
-                self.materials['tungsten']: (128, 0, 128) # 보라색
-            }
-
-            print("1")
-            plot_xy = plot_axis_slice(
-                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
-                view_direction='-z',
-                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
-            )
-
-            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
-            print("XY geometry plot with axes saved.\n")
-
-            print("2")
-            plot_yz = plot_axis_slice(
-                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
-                view_direction='x',
-                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
-            )
-
-            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
-            print("YZ geometry plot with axes saved.\n")
-
-
-        except Exception as e:
-            print(f"\n\nError in generate_geometry_2d_plots method: {e}\n")
-            raise
 
     # 해석 설정
     def define_settings(self):
@@ -499,6 +476,230 @@ class NuclearFusion:
             print(f"\n\nError in define_settings method: {e}\n")
             raise
 
+    # 해석을 통해 무엇을 볼지?
+    def define_tallies(self):
+
+        """
+        Tally는 크게 두 개로 나뉨.
+            1. Mesh를 이용하지 않고 해석의 평균 값을 보는 것
+            2. 2D or 3D Mesh를 이용해서 평균 값이 아닌 local 값을 보는 것
+        """
+
+        try:
+            print("\n\n\nDefining tallies...")
+
+            self.tallies = []
+
+            # Cell 별로 지정된 재료를 filter로 사용
+            eurofer_pressure_tube_object = self.materials['eurofer_pressure_tube']
+            eurofer_pin_object = self.materials['eurofer_pin']
+            eurofer_first_wall_channel_object = self.materials['eurofer_first_wall_channel']
+            he_inner_object = self.materials['He_inner']
+            he_outer_object = self.materials['He_outer']
+            breeder_object = self.materials['breeder_pebble_mix']
+            be12ti_inner_object = self.materials['Be12Ti_inner']
+            be12ti_outer_object = self.materials['Be12Ti_outer']
+            tungsten_object = self.materials['tungsten']
+
+            # 여러 Cell을 하나의 filter로 사용
+            structure_object = [eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object]
+            all_material_object = [eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object, breeder_object, be12ti_inner_object, be12ti_outer_object, tungsten_object]
+
+            eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object])
+            he_inner_filter = openmc.MaterialFilter([he_inner_object])
+            he_outer_filter = openmc.MaterialFilter([he_outer_object])
+            breeder_filter = openmc.MaterialFilter([breeder_object])
+            be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object])
+            be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object])
+            tungsten_filter = openmc.MaterialFilter([tungsten_object])
+            structure_filter = openmc.MaterialFilter(structure_object)
+            all_material_filter = openmc.MaterialFilter(all_material_object)
+
+            # 에너지 filter
+            energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
+            energy_filter = openmc.EnergyFilter(energy_bins)
+
+
+            '''여기부터는 평균 Tally'''
+
+            # 사용자가 알기 쉬운 이름 설정
+            tally_tbr = openmc.Tally(name='tbr')
+            tally_multiplying = openmc.Tally(name='multiplication')
+
+            # Score 정의 : 무엇을 측정?
+            # https://docs.openmc.org/en/stable/usersguide/tallies.html        : OpenMC 내장 Tally
+            # https://www.oecd-nea.org/dbdata/data/manual-endf/endf102_MT.pdf  : ENDF MT list
+            tally_tbr.scores = ['(n,Xt)']  # 'H3-production' 으로 써도 됨. (X: wildcard) MT number: 205
+            tally_tbr.nuclides = ['Li6', 'Li7']  # Li 원자에 대해서 계산
+            tally_multiplying.scores = ['(n,2n)']
+            tally_multiplying.nuclides = ['Be9']
+
+            # Filter 정의 : Score를 언제/어디서/어떤 입자를 측정?
+            tally_tbr.filters = [breeder_filter]
+            tally_multiplying.filters = [be12ti_outer_filter]
+
+            # tallies에 모두 추가
+            self.tallies.append(tally_tbr)
+            self.tallies.append(tally_multiplying)
+
+
+            '''여기부터는 local Tally'''
+
+            # Local Tally 계산을 위한 mesh 생성
+            # RegularMesh : 직육면체 격자, CylindricalMesh : 원통형 격자, SphericalMesh : 구형 격자
+            # CylindricalMesh는 현재 z축만 회전축으로 지원하는데, openmc-plasma-source 모듈은 z축을 토카막의 축으로 지정
+            # -> 그래서 CylindricalMesh는 의미가 없을 듯
+            
+            # OpenMC의 정렬격자 사용
+            mesh = openmc.RegularMesh(name='focused_mesh')
+
+            mesh_config = self.config['mesh']
+
+            mesh_x_min = self.tokamak_radius  # OB FW 위치부터
+            mesh_x_max = self.tokamak_radius + mesh_config['length_x'] # OB Pin 맨 끝까지
+
+            # 2D or 3D mesh 설정해야 함.
+            mesh_z_center = mesh_config['z_center']
+            mesh_z_thickness = mesh_config['z_thickness']
+
+            mesh_y_min = -mesh_config['length_y'] / 2.0  # 핀 반경보다 조금 더 크게
+            mesh_z_min = mesh_z_center - (mesh_z_thickness / 2.0)
+
+            mesh_y_max = +mesh_config['length_y'] / 2.0
+            mesh_z_max = mesh_z_center + (mesh_z_thickness / 2.0)
+
+            # 두 꼭짓점 사이만 격자를 생성
+            mesh.lower_left = (mesh_x_min, mesh_y_min, mesh_z_min)  # lower_left 꼭짓점
+            mesh.upper_right = (mesh_x_max, mesh_y_max, mesh_z_max)  # upper_right 꼭짓점
+
+            # 격자를 몇개로 나누지? (x, y, z)
+            mesh.dimension = (mesh_config['division_x'], mesh_config['division_y'], mesh_config['division_z'])
+
+            mesh_filter = openmc.MeshFilter(mesh)
+
+            tally_local_flux = openmc.Tally(name='local_flux')
+            tally_local_tbr = openmc.Tally(name='local_tbr')
+
+            tally_local_heating_neutron = openmc.Tally(name='local_heating_neutron')
+            tally_local_heating_photon = openmc.Tally(name='local_heating_photon')
+
+            tally_local_heating_structure_neutron = openmc.Tally(name='local_heating_structure_neutron')
+            tally_local_heating_structure_photon = openmc.Tally(name='local_heating_structure_photon')
+            tally_local_heating_breeder_neutron = openmc.Tally(name='local_heating_breeder_neutron')
+            tally_local_heating_breeder_photon = openmc.Tally(name='local_heating_breeder_photon')
+            tally_local_heating_outer_multiplier_neutron = openmc.Tally(name='local_heating_outer_multiplier_neutron')
+            tally_local_heating_outer_multiplier_photon = openmc.Tally(name='local_heating_outer_multiplier_photon')
+
+            tally_local_multiplication = openmc.Tally(name='local_multiplication')
+
+            tally_local_flux.scores = ['flux']
+            tally_local_tbr.scores = ['(n,Xt)']
+
+            tally_local_heating_neutron.scores = ['heating']
+            tally_local_heating_photon.scores = ['heating']
+
+            tally_local_heating_structure_neutron.scores = ['heating']
+            tally_local_heating_structure_photon.scores = ['heating']
+            tally_local_heating_breeder_neutron.scores = ['heating']
+            tally_local_heating_breeder_photon.scores = ['heating']
+            tally_local_heating_outer_multiplier_neutron.scores = ['heating']
+            tally_local_heating_outer_multiplier_photon.scores = ['heating']
+
+            tally_local_multiplication.scores = ['(n,2n)']
+
+            tally_local_tbr.nuclides = ['Li6', 'Li7']
+            tally_local_multiplication.nuclides = ['Be9']
+
+            tally_local_flux.filters = [mesh_filter, all_material_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_tbr.filters = [mesh_filter, breeder_filter]
+
+            tally_local_heating_neutron.filters = [mesh_filter, all_material_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_heating_photon.filters = [mesh_filter, all_material_filter, openmc.ParticleFilter(['photon'])]
+
+            tally_local_heating_structure_neutron.filters = [mesh_filter, eurofer_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_heating_structure_photon.filters = [mesh_filter, eurofer_filter, openmc.ParticleFilter(['photon'])]
+            tally_local_heating_breeder_neutron.filters = [mesh_filter, breeder_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_heating_breeder_photon.filters = [mesh_filter, breeder_filter, openmc.ParticleFilter(['photon'])]
+            tally_local_heating_outer_multiplier_neutron.filters = [mesh_filter, be12ti_outer_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_heating_outer_multiplier_photon.filters = [mesh_filter, be12ti_outer_filter, openmc.ParticleFilter(['photon'])]
+
+            tally_local_multiplication.filters = [mesh_filter, be12ti_outer_filter]
+
+            local_tallies_list = [
+                tally_local_flux,
+                tally_local_tbr,
+                tally_local_heating_neutron,
+                tally_local_heating_photon,
+                tally_local_heating_structure_neutron,
+                tally_local_heating_structure_photon,
+                tally_local_heating_breeder_neutron,
+                tally_local_heating_breeder_photon,
+                tally_local_heating_outer_multiplier_neutron,
+                tally_local_heating_outer_multiplier_photon,
+                tally_local_multiplication,
+            ]
+
+            # Tally를 mesh 하나의 부피로 나눌 것인가?
+            for tally in local_tallies_list:
+                tally.volume_normalization = True
+
+            self.tallies.extend(local_tallies_list)
+
+
+            tallies_obj = openmc.Tallies(self.tallies)
+            print("\nExporting tallies to tallies.xml...\n")
+            tallies_obj.export_to_xml()
+            print("tallies.xml exported successfully.\n")
+            print("========================================================================\n")
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"\n\nError in define_tallies method: {e}\n")
+            raise
+
+    # 해석 시작 전에 가능한 시각화
+    def generate_geometry_2D_plots(self, plots_folder='plots'):
+        try:
+            print("\n\n\n--- Generating 2D geometry plots with axes using geometry.plot() ---")
+
+            # Plot에 사용할 색상을 재료에 부여
+            material_color_map = {
+                self.materials['eurofer_pressure_tube']: (128, 128, 128),  # 회색
+                self.materials['eurofer_pin']: (128, 128, 128),  # 회색
+                self.materials['eurofer_first_wall_channel']: (128, 128, 128),  # 회색
+                self.materials['Be12Ti_inner']: (0, 255, 0),  # 초록색
+                self.materials['Be12Ti_outer']: (0, 255, 0),  # 초록색
+                self.materials['breeder_pebble_mix']: (255, 0, 0),  # 빨간색
+                self.materials['He_inner']: (0, 0, 255),  # 파란색
+                self.materials['He_outer']: (0, 0, 255),  # 파란색
+                self.materials['tungsten']: (128, 0, 128) # 보라색
+            }
+
+            print("1")
+            plot_xy = plot_axis_slice(
+                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
+                view_direction='-z',
+                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
+            )
+
+            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
+            print("XY geometry plot with axes saved.\n")
+
+            print("2")
+            plot_yz = plot_axis_slice(
+                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
+                view_direction='x',
+                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
+            )
+
+            plot_yz.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
+            print("YZ geometry plot with axes saved.\n")
+
+
+        except Exception as e:
+            print(f"\n\nError in generate_geometry_2d_plots method: {e}\n")
+            raise
+
     # Source 시각화
     def preview_source_distribution(self, plots_folder='plots', n_samples=1000):
         try:
@@ -533,12 +734,28 @@ class NuclearFusion:
             # 에너지 분포 (Energy)
             print("Generating source energy preview...")
             plot_en = plot_source_energy(this=model, n_samples=n_samples)
+            plot_en.update_layout(
+                title='Source Particle Energy Distribution',
+                xaxis_title='Energy [MeV]',
+                yaxis_title='Probability [-]',
+                autosize=True,
+                legend=dict(),
+                showlegend=True,
+            )
             plot_en.write_html(os.path.join(plots_folder, 'source_preview_energy.html'))
             print("-> Source energy preview saved.\n")
 
             # 방향 분포 (Direction)
             print("Generating source direction preview...")
             plot_dir = plot_source_direction(this=model, n_samples=n_samples)
+            plot_dir.update_layout(
+                title='Source Particle Moving Direction',
+                xaxis_title='X [cm]',
+                yaxis_title='Y [cm]',
+                autosize=True,
+                legend=dict(),
+                showlegend=True,
+            )
             plot_dir.write_html(os.path.join(plots_folder, 'source_preview_direction.html'))
             print("-> Source direction preview saved.\n")
 
@@ -546,189 +763,6 @@ class NuclearFusion:
 
         except Exception as e:
             print(f"\n\nError in create_source_previews method: {e}\n")
-            raise
-
-    # 해석을 통해 무엇을 볼지?
-    def define_tallies(self):
-
-        """
-        Tally는 크게 두 개로 나뉨.
-            1. Mesh를 이용하지 않고 해석의 평균 값을 보는 것
-            2. 2D or 3D Mesh를 이용해서 평균 값이 아닌 local 값을 보는 것
-        """
-
-        try:
-            print("\n\n\nDefining tallies...")
-
-            self.tallies = []
-
-            # Cell 별로 지정된 재료를 filter로 사용
-            eurofer_pressure_tube_object = self.materials['eurofer_pressure_tube']
-            eurofer_pin_object = self.materials['eurofer_pin']
-            eurofer_first_wall_channel_object = self.materials['eurofer_first_wall_channel']
-            he_inner_object = self.materials['He_inner']
-            he_outer_object = self.materials['He_outer']
-            breeder_object = self.materials['breeder_pebble_mix']
-            be12ti_inner_object = self.materials['Be12Ti_inner']
-            be12ti_outer_object = self.materials['Be12Ti_outer']
-            tungsten_object = self.materials['tungsten']
-
-            # Cubit 볼륨 이름으로 cell filter 정의
-            pressure_tube_cell_filter = openmc.CellFilter(target_pressure_tube)
-            pin_cell_filter = openmc.CellFilter(target_pin)
-            breeder_cell_filter = openmc.CellFilter(target_breeder)
-            outer_multiplier_cell_filter = openmc.CellFilter(target_outer_multiplier)
-            structure_cells_filter = openmc.CellFilter(target_structure)
-            material_cells_filter = openmc.CellFilter(target_material)
-
-            # 에너지 filter
-            energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
-            energy_filter = openmc.EnergyFilter(energy_bins)
-
-
-            '''여기부터는 평균 Tally'''
-
-            # 사용자가 알기 쉬운 이름 설정
-            tally_tbr = openmc.Tally(name='tbr')
-            tally_multiplying = openmc.Tally(name='multiplication')
-
-            # Score 정의 : 무엇을 측정?
-            # https://docs.openmc.org/en/stable/usersguide/tallies.html        : OpenMC 내장 Tally
-            # https://www.oecd-nea.org/dbdata/data/manual-endf/endf102_MT.pdf  : ENDF MT list
-            tally_tbr.scores = ['(n,Xt)']  # 'H3-production' 으로 써도 됨. (X: wildcard) MT number: 205
-            tally_tbr.nuclides = ['Li6', 'Li7']  # Li 원자에 대해서 계산
-            tally_multiplying.scores = ['(n,2n)']
-            tally_multiplying.nuclides = ['Be9']
-
-            # Filter 정의 : Score를 언제/어디서/어떤 입자를 측정?
-            tally_tbr.filters = [breeder_cell_filter]
-            tally_multiplying.filters = [outer_multiplier_cell_filter]
-
-
-            # tallies에 모두 추가
-            self.tallies.append(tally_tbr)
-            self.tallies.append(tally_multiplying)
-
-
-            '''여기부터는 local Tally'''
-
-            # Local Tally 계산을 위한 mesh 생성
-            # RegularMesh : 직육면체 격자, CylindricalMesh : 원통형 격자, SphericalMesh : 구형 격자
-            # CylindricalMesh는 현재 z축만 회전축으로 지원하는데, openmc-plasma-source 모듈은 z축을 토카막의 축으로 지정
-            # -> 그래서 CylindricalMesh는 의미가 없을 듯
-
-            mesh = openmc.RegularMesh(name='focused_mesh')
-
-            mesh_config = self.config['mesh']
-
-            mesh_x_min = self.tokamak_radius  # OB FW 위치부터
-            mesh_x_max = self.tokamak_radius + mesh_config['length_x'] # OB Pin 맨 끝까지
-
-            # 2D or 3D mesh 설정해야 함.
-            mesh_z_center = mesh_config['z_center']
-            mesh_z_thickness = mesh_config['z_thickness']
-
-            mesh_y_min = -mesh_config['length_y'] / 2.0  # 핀 반경보다 조금 더 크게
-            mesh_z_min = mesh_z_center - (mesh_z_thickness / 2.0)
-
-            mesh_y_max = +mesh_config['length_y'] / 2.0
-            mesh_z_max = mesh_z_center + (mesh_z_thickness / 2.0)
-
-            # 두 꼭짓점 사이만 격자를 생성
-            mesh.lower_left = (mesh_x_min, mesh_y_min, mesh_z_min)  # lower_left 꼭짓점
-            mesh.upper_right = (mesh_x_max, mesh_y_max, mesh_z_max)  # upper_right 꼭짓점
-
-            # 격자를 몇개로 나누지? (x, y, z)
-            mesh.dimension = (mesh_config['division_x'], mesh_config['division_y'], mesh_config['division_z'])
-
-            mesh_filter = openmc.MeshFilter(mesh)
-
-            tally_local_flux = openmc.Tally(name='local_flux')
-            tally_local_tbr = openmc.Tally(name='local_tbr')
-
-            tally_local_heating_neutron = openmc.Tally(name='local_heating_neutron')
-            tally_local_heating_photon = openmc.Tally(name='local_heating_photon')
-
-            tally_local_heating_tube_neutron = openmc.Tally(name='local_heating_tube_neutron')
-            tally_local_heating_tube_photon = openmc.Tally(name='local_heating_tube_photon')
-            tally_local_heating_pin_neutron = openmc.Tally(name='local_heating_pin_neutron')
-            tally_local_heating_pin_photon = openmc.Tally(name='local_heating_pin_photon')
-            tally_local_heating_breeder_neutron = openmc.Tally(name='local_heating_breeder_neutron')
-            tally_local_heating_breeder_photon = openmc.Tally(name='local_heating_breeder_photon')
-            tally_local_heating_outer_multiplier_neutron = openmc.Tally(name='local_heating_outer_multiplier_neutron')
-            tally_local_heating_outer_multiplier_photon = openmc.Tally(name='local_heating_outer_multiplier_photon')
-
-            tally_local_multiplication = openmc.Tally(name='local_multiplication')
-
-            tally_local_flux.scores = ['flux']
-            tally_local_tbr.scores = ['(n,Xt)']
-
-            tally_local_heating_neutron.scores = ['heating']
-            tally_local_heating_photon.scores = ['heating']
-
-            tally_local_heating_tube_neutron.scores = ['heating']
-            tally_local_heating_tube_photon.scores = ['heating']
-            tally_local_heating_pin_neutron.scores = ['heating']
-            tally_local_heating_pin_photon.scores = ['heating']
-            tally_local_heating_breeder_neutron.scores = ['heating']
-            tally_local_heating_breeder_photon.scores = ['heating']
-            tally_local_heating_outer_multiplier_neutron.scores = ['heating']
-            tally_local_heating_outer_multiplier_photon.scores = ['heating']
-
-            tally_local_multiplication.scores = ['(n,2n)']
-
-            tally_local_tbr.nuclides = ['Li6', 'Li7']
-            tally_local_multiplication.nuclides = ['Be9']
-
-            tally_local_flux.filters = [mesh_filter, material_cells_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_tbr.filters = [mesh_filter, breeder_cell_filter]
-
-            tally_local_heating_neutron.filters = [mesh_filter, material_cells_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_photon.filters = [mesh_filter, material_cells_filter, openmc.ParticleFilter(['photon'])]
-
-            tally_local_heating_tube_neutron.filters = [mesh_filter, pressure_tube_cell_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_tube_photon.filters = [mesh_filter, pressure_tube_cell_filter, openmc.ParticleFilter(['photon'])]
-            tally_local_heating_pin_neutron.filters = [mesh_filter, pin_cell_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_pin_photon.filters = [mesh_filter, pin_cell_filter, openmc.ParticleFilter(['photon'])]
-            tally_local_heating_breeder_neutron.filters = [mesh_filter, breeder_cell_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_breeder_photon.filters = [mesh_filter, breeder_cell_filter, openmc.ParticleFilter(['photon'])]
-            tally_local_heating_outer_multiplier_neutron.filters = [mesh_filter, outer_multiplier_cell_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_outer_multiplier_photon.filters = [mesh_filter, outer_multiplier_cell_filter, openmc.ParticleFilter(['photon'])]
-
-            tally_local_multiplication.filters = [mesh_filter, outer_multiplier_cell_filter]
-
-            local_tallies_list = [
-                tally_local_flux,
-                tally_local_tbr,
-                tally_local_heating_neutron,
-                tally_local_heating_photon,
-                tally_local_heating_tube_neutron,
-                tally_local_heating_tube_photon,
-                tally_local_heating_pin_neutron,
-                tally_local_heating_pin_photon,
-                tally_local_heating_breeder_neutron,
-                tally_local_heating_breeder_photon,
-                tally_local_heating_outer_multiplier_neutron,
-                tally_local_heating_outer_multiplier_photon,
-                tally_local_multiplication,
-            ]
-
-            # Tally를 mesh 하나의 부피로 나눌 것인가?
-            for tally in local_tallies_list:
-                tally.volume_normalization = True
-
-            self.tallies.extend(local_tallies_list)
-
-
-            tallies_obj = openmc.Tallies(self.tallies)
-            print("\nExporting tallies to tallies.xml...\n")
-            tallies_obj.export_to_xml()
-            print("tallies.xml exported successfully.\n")
-            print("========================================================================\n")
-            time.sleep(1)
-
-        except Exception as e:
-            print(f"\n\nError in define_tallies method: {e}\n")
             raise
 
     # 해석에 필요한 사전 작업 모두 실시
