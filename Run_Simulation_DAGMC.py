@@ -63,7 +63,7 @@ def main():
         status_window.update_task_status("Directory Setup", "OK! ✓", "green")
 
         # NuclearFusion 인스턴스 생성 (Simulation_Builder.py에서 가져옴)
-        model = NuclearFusion(source_choice=source_choice, config=config)
+        model = NuclearFusion(source_choice=source_choice, cross_section_path=cs_path, config=config)
         status_window.update_task_status("Instance Creation", "OK! ✓", "green")
 
         # 해석 세팅
