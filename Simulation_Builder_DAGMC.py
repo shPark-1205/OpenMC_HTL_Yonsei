@@ -162,7 +162,7 @@ class NuclearFusion:
                     eurofer_first_wall_channel_mat.name = 'eurofer_first_wall_channel'
                     self.materials['eurofer_first_wall_channel'] = eurofer_first_wall_channel_mat
                     openmc_materials_list.append(eurofer_first_wall_channel_mat)
-                    print(f"  -> Created 'eurofer_first_wall_channel' (ID: {eurofer_pin_mat.id})")
+                    print(f"  -> Created 'eurofer_first_wall_channel' (ID: {eurofer_first_wall_channel_mat.id})")
 
                 elif mat_name == 'He':
                     print(f"Cloning material: {mat_name} for different components...\n")
