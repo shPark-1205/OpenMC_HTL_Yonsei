@@ -177,7 +177,7 @@ class SourceSelectionWindow:
 
         # 위젯 생성 및 배치
         base_frame = tk.Frame(self.window)
-        base_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=10)
+        base_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
         base_frame.grid_columnconfigure(0, weight=1)
 
         tk.Label(base_frame, text="Select a pre-defined source OR build a custom one:", font=self.title_font).grid(row=0, column=0, sticky='w')
