@@ -45,7 +45,18 @@ def main():
             config = yaml.safe_load(f)
 
         # GUI 설정 및 플라즈마 소스 입력
-        status_window, source_choice, tasks = setup_ui_and_get_choice()
+        status_window, choice_dict, tasks = setup_ui_and_get_choice()
+
+        # cross_sections.xml 파일 경로 결정
+        cs_choice = choice_dict['cross_section']
+        if cs_choice == "endf":
+            cs_path = r'/app/data/endfb-vii.1-hdf5/cross_sections.xml'
+        elif cs_choice == "jeff":
+            cs_path = r'/app/data/jeff-3.3-hdf5/cross_sections.xml'
+        else:
+            print("\n\nInvalid cross section choice. Exiting program.")
+
+        source_choice = choice_dict['source']
 
         # /plots, /results 폴더 생성
         prepare_directories(['plots', 'results'])
