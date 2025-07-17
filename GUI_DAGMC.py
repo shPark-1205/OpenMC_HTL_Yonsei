@@ -127,7 +127,7 @@ class SourceSelectionWindow:
     def __init__(self, title="Defining Plasma Source"):
         self.window = tk.Tk()
         self.window.title(title)
-        self.window.geometry("800x700")
+        self.window.geometry("800x900")
         self.selection = None
 
         # 폰트 및 tk 변수 준비-
@@ -245,14 +245,46 @@ class SourceSelectionWindow:
         self.space_params_frames["Hexagonal Face"] = hex_frame
         hex_frame.grid(row=1, column=0)
 
-        tk.Label(hex_frame, text="X-plane (Defaluts to major radius):").grid(row=0, column=0, sticky='e')
+        tk.Label(hex_frame, text="X-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
         tk.Entry(hex_frame, textvariable=self.hex_x_coord_var, width=10).grid(row=0, column=1, padx=5)
         tk.Label(hex_frame, text="Pitch (Better not to change):").grid(row=0, column=2, sticky='e')
         tk.Entry(hex_frame, textvariable=self.hex_pitch_var, width=10).grid(row=0, column=3, padx=5)
 
+        # 사용자에게 플라즈마 소스 각도 입력 받기
+        angle_main_frame = tk.LabelFrame(self.custom_frame, text="Source direction", font=self.label_font, padx=10, pady=10)
+        angle_main_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)  # row=1 에 배치
+        angle_main_frame.grid_columnconfigure(0, weight=1)
+
+        # 각도 분포 선택을 위한 변수
+        self.angle_choice = tk.StringVar(value="Isotropic")
+
+        # 각도 분포 라디오 버튼을 담을 프레임
+        angle_radio_frame = tk.Frame(angle_main_frame)
+        angle_radio_frame.pack()
+
+        tk.Radiobutton(angle_radio_frame, text="Isotropic", variable=self.angle_choice, value="Isotropic",
+                       command=self._update_angle_options).pack(side='left')
+        tk.Radiobutton(angle_radio_frame, text="Monodirectional", variable=self.angle_choice, value="Monodirectional",
+                       command=self._update_angle_options).pack(side='left')
+
+        # Monodirectional 선택 시 벡터 입력을 받을 프레임 (처음에는 숨김)
+        self.mono_frame = tk.Frame(angle_main_frame)
+        self.mono_frame.pack(pady=5)
+
+        self.mono_u = tk.DoubleVar(value=1.0)
+        self.mono_v = tk.DoubleVar(value=0.0)
+        self.mono_w = tk.DoubleVar(value=0.0)
+
+        tk.Label(self.mono_frame, text="u:").pack(side='left')
+        tk.Entry(self.mono_frame, textvariable=self.mono_u, width=5).pack(side='left')
+        tk.Label(self.mono_frame, text="v:").pack(side='left')
+        tk.Entry(self.mono_frame, textvariable=self.mono_v, width=5).pack(side='left')
+        tk.Label(self.mono_frame, text="w:").pack(side='left')
+        tk.Entry(self.mono_frame, textvariable=self.mono_w, width=5).pack(side='left')
+
         # 사용자에게 플라즈마 소스 별 변수 입력 받기
         energy_main_frame = tk.LabelFrame(self.custom_frame, text="Plasma Energy Distribution", font=self.label_font, padx=10, pady=10)
-        energy_main_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
+        energy_main_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=5)
         energy_main_frame.grid_columnconfigure(0, weight=1)
 
         # 4개의 Custom 플라즈마 소스 중 하나 선택
@@ -313,10 +345,11 @@ class SourceSelectionWindow:
 
         # 최종 확인 버튼
         confirm_btn = tk.Button(self.custom_frame, text="Confirm Custom Source", font=self.button_font, command=self._finalize_custom_source)
-        confirm_btn.grid(row=2, column=0, pady=20)
+        confirm_btn.grid(row=3, column=0, pady=20)
 
         self._update_space_options()
         self._update_energy_options()
+        self._update_angle_options()
 
     # 사용자가 선택을 완료하면
     def _on_select(self, choice):
@@ -338,6 +371,13 @@ class SourceSelectionWindow:
         if selected in self.space_params_frames:
             self.space_params_frames[selected].grid(row=1, column=0, pady=5) # 선택된 프레임만 표시
 
+    # 사용자가 custom source의 벡터를 선택하면
+    def _update_angle_options(self):
+        if self.angle_choice.get() == "Monodirectional":
+            self.mono_frame.pack(pady=5)
+        else:
+            self.mono_frame.pack_forget()
+
     # 사용자가 custom source의 에너지 분포를 선택하면
     def _update_energy_options(self):
         selected = self.energy_choice.get()
@@ -356,10 +396,18 @@ class SourceSelectionWindow:
         elif space_type == "Hexagonal Face":
             space_options["x_coord"] = self.hex_x_coord_var.get()
             space_options["pitch"] = self.hex_pitch_var.get()
+
+        angle_type = self.angle_choice.get()
+        angle_options = {"type": angle_type}
+        if angle_type == "Monodirectional":
+            angle_options["uvw"] = (self.mono_u.get(), self.mono_v.get(), self.mono_w.get())
+
+
         selected_energy = self.energy_choice.get()
         energy_options = {"type": selected_energy,
                           "params": {k: v.get() for k, v in self.energy_params[selected_energy].items()}}
-        source_selection = (4, {"space": space_options, "energy": energy_options})
+
+        source_selection = (4, {"space": space_options, "angle": angle_options,"energy": energy_options})
         cs_choice = self.cross_section_choice.get()
         self.selection = {'source': source_selection, 'cross_section': cs_choice}
         self.window.destroy()
