@@ -175,6 +175,20 @@ class SourceSelectionWindow:
         author_frame.grid(row=1, column=0, sticky="e", padx=10)
         tk.Label(author_frame, text="Seong-Hyeok Park @ HTL\nokayshpark@yonsei.ac.kr", font=self.subtitle_font).pack(side='right')
 
+        # Nuclear cross_section 선택을 위한 변수
+        self.cross_section_choice = tk.StringVar(value="endf")  # 기본은 ENDF
+
+        # 핵자료 선택 프레임 생성
+        cs_frame = tk.LabelFrame(self.window, text="Nuclear Cross-Section Library", font=self.title_font, padx=10, pady=10)
+        cs_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(10, 0))
+        cs_frame.grid_columnconfigure((0, 1), weight=1)
+
+        # 핵자료 라디오 버튼 생성 및 배치
+        rb_endf = tk.Radiobutton(cs_frame, text="ENDF/B-VII.1", font=self.button_font ,variable=self.cross_section_choice, value="endf")
+        rb_endf.grid(row=0, column=0, sticky='w')
+        rb_jeff = tk.Radiobutton(cs_frame, text="JEFF-3.3", font=self.button_font, variable=self.cross_section_choice, value="jeff")
+        rb_jeff.grid(row=0, column=1, sticky='w')
+
         # 위젯 생성 및 배치
         base_frame = tk.Frame(self.window)
         base_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
