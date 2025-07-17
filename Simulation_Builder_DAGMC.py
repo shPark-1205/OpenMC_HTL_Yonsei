@@ -342,11 +342,11 @@ class NuclearFusion:
             self.settings.photon_transport = True
 
             # Tracking할 particle 지정
-            # self.settings.track = [
-            #     (20, 1, 1), # (Batch, Generation, Particle #)
-            #     (50, 1, 50),
-            #     (80, 1, 100)
-            # ]
+            self.settings.track = [
+                (20, 1, 1), # (Batch, Generation, Particle #)
+                (50, 1, 100),
+                (80, 1, 10000)
+            ]
 
             # 사용자 선택을 받기 위한 도구
             plasma_source = None
