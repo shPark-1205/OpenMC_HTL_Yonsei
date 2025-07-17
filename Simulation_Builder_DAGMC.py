@@ -424,9 +424,14 @@ class NuclearFusion:
                 elif energy_type == "Maxwell distribution":
                     custom_source.energy = openmc.stats.Maxwell(theta=params["theta"])
 
-                # 각도 분포는 Isotropic으로 고정
-                # custom_source.angle = openmc.stats.Isotropic()
-                custom_source.angle = openmc.stats.Monodirectional(reference_uvw=[1.0, 0.0, 0.0])
+                # Source direction 설정
+                angle_options = options["angle"]
+                angle_type = angle_options["type"]
+
+                if angle_type == "Isotropic":
+                    custom_source.angle = openmc.stats.Isotropic()
+                elif angle_type == "Monodirectional":
+                    custom_source.angle = openmc.stats.Monodirectional(reference_uvw=angle_options["uvw"])
 
                 space_options = options["space"]
 
