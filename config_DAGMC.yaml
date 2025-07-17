@@ -3,8 +3,8 @@
 
 # 해석 설정
 simulation:
-  particles: 1000000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
-  batches: 100 # 해석의 iteration
+  particles: 100 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  batches: 10 # 해석의 iteration
   inactive: 0
   threads: 24 # 컴퓨터 코어 수 (미설정시 최대 코어로 자동 설정)
 
@@ -49,8 +49,8 @@ mesh:
   length_x: 46.2 # First wall부터의 x 방향 길이 (462 mm)
   length_y: 16.0 # y 방향 길이 (160 mm)
   z_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  z_thickness: 0.01 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 4620 # x 방향 격자 개수
-  division_y: 1600 # y 방향 격자 개수
+  z_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
+  division_x: 462 # x 방향 격자 개수
+  division_y: 160 # y 방향 격자 개수
   division_z: 1 # z 방향 격자 개수
 

@@ -2,7 +2,6 @@
 
 import openmc
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 import time
 import sys
@@ -45,7 +44,7 @@ def create_hexagonal_source_points(n_points, x_coord, pitch):
 
 
 class NuclearFusion:
-    def __init__(self, source_choice, config):
+    def __init__(self, source_choice, cross_section_path, config):
         try:
 
             # config 객체를 클래스 속성으로 저장
@@ -101,9 +100,9 @@ class NuclearFusion:
             # Mesh Tally 설정 시 Cell 이름과 ID 매칭 용도
             self.cell_name_to_id = {}
             
-            # Docker image 안에 OpenMC 공식 library(ENDF/B-VII.1)를 넣어 놨음.
+            # Docker image 안에 OpenMC 공식 library(ENDF/B-VII.1 및 JEFF 3.3)를 넣어 놨음.
             # https://openmc.org/official-data-libraries/
-            openmc.config['cross_sections'] = r'/app/data/endfb-vii.1-hdf5/cross_sections.xml'
+            openmc.config['cross_sections'] = cross_section_path
 
         except Exception as e:
             print(f"\n\nError during NuclearFusion class initialization: {e}\n")

@@ -211,7 +211,7 @@ class SourceSelectionWindow:
 
         # Custom source 프레임 (처음에는 숨김)
         self.custom_frame = tk.Frame(self.window, pady=5)
-        self.custom_frame.grid(row=3, column=0, sticky="ew", padx=10)
+        self.custom_frame.grid(row=4, column=0, sticky="ew", padx=10)
         self.custom_frame.grid_columnconfigure(0, weight=1)
         self.custom_frame.grid_remove()
 
@@ -320,7 +320,8 @@ class SourceSelectionWindow:
 
     # 사용자가 선택을 완료하면
     def _on_select(self, choice):
-        self.selection = choice
+        cs_choice = self.cross_section_choice.get()
+        self.selection = {'source': choice, 'cross_section': cs_choice}
         self.window.destroy()
 
     # 사용자가 Custom source 버튼을 클릭하면
@@ -358,7 +359,9 @@ class SourceSelectionWindow:
         selected_energy = self.energy_choice.get()
         energy_options = {"type": selected_energy,
                           "params": {k: v.get() for k, v in self.energy_params[selected_energy].items()}}
-        self.selection = (4, {"space": space_options, "energy": energy_options})
+        source_selection = (4, {"space": space_options, "energy": energy_options})
+        cs_choice = self.cross_section_choice.get()
+        self.selection = {'source': source_selection, 'cross_section': cs_choice}
         self.window.destroy()
 
     def ask(self):
