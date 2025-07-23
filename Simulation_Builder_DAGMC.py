@@ -61,14 +61,12 @@ class NuclearFusion:
                 }},
                 {'id': 301, 'name': 'tungsten', 'kwargs': {}},
 
-                # 증식재의 Li6 enrichment와 packing factor 정의 가능
+                # 증식재의 Li6 enrichment정의 가능
                 {'id': 402, 'name': 'Li4SiO4', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
-                    'packing_fraction': self.config['materials']['breeder']['packing_fraction'],
                 }},
                 {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
-                    'packing_fraction': self.config['materials']['breeder']['packing_fraction'],
                 }},
             ]
 
@@ -201,6 +199,7 @@ class NuclearFusion:
                 materials=[mat1, mat2],
                 fracs=[self.config['materials']['breeder']['mixture_Li4SiO4'], self.config['materials']['breeder']['mixture_Li2TiO3']],
                 percent_type='vo',
+                packing_fraction=self.config['materials']['breeder']['packing_fraction'],
                 name='breeder_pebble_mix'  # 새로운 재료의 이름 지정
             )
 
@@ -502,47 +501,43 @@ class NuclearFusion:
             be12ti_outer_object = self.materials['Be12Ti_outer']
             tungsten_object = self.materials['tungsten']
 
-            # 여러 Cell을 하나의 filter로 사용
-            structure_object = [eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object]
-            all_material_object = [eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object, breeder_object, be12ti_inner_object, be12ti_outer_object, tungsten_object]
-
-            eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object], filter_id=11)
-            structure_filter = openmc.MaterialFilter(structure_object, filter_id=21)
-            he_inner_filter = openmc.MaterialFilter([he_inner_object], filter_id=31)
-            he_outer_filter = openmc.MaterialFilter([he_outer_object], filter_id=32)
-            breeder_filter = openmc.MaterialFilter([breeder_object], filter_id=41)
-            be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object], filter_id=51)
-            be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object], filter_id=52)
-            tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=61)
-            all_material_filter = openmc.MaterialFilter(all_material_object, filter_id=71)
+            solid_materials_to_tally = [
+                eurofer_pressure_tube_object,
+                eurofer_pin_object,
+                eurofer_first_wall_channel_object,
+                breeder_object,
+                be12ti_inner_object,
+                be12ti_outer_object,
+                tungsten_object,
+            ]
+            solid_material_filter = openmc.MaterialFilter(solid_materials_to_tally, filter_id=11)
+            breeder_filter = openmc.MaterialFilter([breeder_object], filter_id=21)
+            be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object], filter_id=31)
+            be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object], filter_id=32)
 
             # 에너지 filter
             energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
-            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=81)
+            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=41)
 
 
             '''여기부터는 평균 Tally'''
-
-            # 사용자가 알기 쉬운 이름 설정
-            tally_tbr = openmc.Tally(name='tbr', tally_id=1)
-            tally_multiplying = openmc.Tally(name='multiplication', tally_id=2)
-
             # Score 정의 : 무엇을 측정?
             # https://docs.openmc.org/en/stable/usersguide/tallies.html        : OpenMC 내장 Tally
             # https://www.oecd-nea.org/dbdata/data/manual-endf/endf102_MT.pdf  : ENDF MT list
-            tally_tbr.scores = ['(n,Xt)']  # 'H3-production' 으로 써도 됨. (X: wildcard) MT number: 205
+            # Filter 정의 : Score를 언제/어디서/어떤 입자를 측정?
+
+            # 사용자가 알기 쉬운 이름 설정
+            tally_tbr = openmc.Tally(name='tbr', tally_id=98)
+            tally_tbr.scores = ['H3-production']  # '(n,Xt)' 으로 써도 됨. (X: wildcard) MT number: 205
             tally_tbr.nuclides = ['Li6', 'Li7']  # Li 원자에 대해서 계산
+            tally_tbr.filters = [breeder_filter]
+            self.tallies.append(tally_tbr)
+
+            tally_multiplying = openmc.Tally(name='multiplication', tally_id=99)
             tally_multiplying.scores = ['(n,2n)']
             tally_multiplying.nuclides = ['Be9']
-
-            # Filter 정의 : Score를 언제/어디서/어떤 입자를 측정?
-            tally_tbr.filters = [breeder_filter]
             tally_multiplying.filters = [be12ti_outer_filter]
-
-            # tallies에 모두 추가
-            self.tallies.append(tally_tbr)
             self.tallies.append(tally_multiplying)
-
 
             '''여기부터는 local Tally'''
 
@@ -578,65 +573,23 @@ class NuclearFusion:
 
             mesh_filter = openmc.MeshFilter(mesh, filter_id=99)
 
-            tally_local_flux = openmc.Tally(name='local_flux', tally_id=11)
+            tally_flux_heating = openmc.Tally(name='flux_heating', tally_id=11)
+            tally_flux_heating.scores = ['flux', 'heating']
+            tally_flux_heating.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron', 'photon'])]
+
             tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
-
-            tally_local_heating_neutron = openmc.Tally(name='local_heating_neutron', tally_id=31)
-            tally_local_heating_photon = openmc.Tally(name='local_heating_photon', tally_id=32)
-
-            tally_local_heating_structure_neutron = openmc.Tally(name='local_heating_structure_neutron', tally_id=41)
-            tally_local_heating_structure_photon = openmc.Tally(name='local_heating_structure_photon', tally_id=42)
-            tally_local_heating_breeder_neutron = openmc.Tally(name='local_heating_breeder_neutron', tally_id=51)
-            tally_local_heating_breeder_photon = openmc.Tally(name='local_heating_breeder_photon', tally_id=52)
-            tally_local_heating_outer_multiplier_neutron = openmc.Tally(name='local_heating_outer_multiplier_neutron', tally_id=61)
-            tally_local_heating_outer_multiplier_photon = openmc.Tally(name='local_heating_outer_multiplier_photon', tally_id=62)
-
-            tally_local_multiplication = openmc.Tally(name='local_multiplication', tally_id=71)
-
-            tally_local_flux.scores = ['flux']
-            tally_local_tbr.scores = ['(n,Xt)']
-
-            tally_local_heating_neutron.scores = ['heating']
-            tally_local_heating_photon.scores = ['heating']
-
-            tally_local_heating_structure_neutron.scores = ['heating']
-            tally_local_heating_structure_photon.scores = ['heating']
-            tally_local_heating_breeder_neutron.scores = ['heating']
-            tally_local_heating_breeder_photon.scores = ['heating']
-            tally_local_heating_outer_multiplier_neutron.scores = ['heating']
-            tally_local_heating_outer_multiplier_photon.scores = ['heating']
-
-            tally_local_multiplication.scores = ['(n,2n)']
-
+            tally_local_tbr.scores = ['H3-production']
             tally_local_tbr.nuclides = ['Li6', 'Li7']
-            tally_local_multiplication.nuclides = ['Be9']
-
-            tally_local_flux.filters = [mesh_filter, all_material_filter, openmc.ParticleFilter(['neutron'])]
             tally_local_tbr.filters = [mesh_filter, breeder_filter]
 
-            tally_local_heating_neutron.filters = [mesh_filter, all_material_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_photon.filters = [mesh_filter, all_material_filter, openmc.ParticleFilter(['photon'])]
-
-            tally_local_heating_structure_neutron.filters = [mesh_filter, eurofer_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_structure_photon.filters = [mesh_filter, eurofer_filter, openmc.ParticleFilter(['photon'])]
-            tally_local_heating_breeder_neutron.filters = [mesh_filter, breeder_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_breeder_photon.filters = [mesh_filter, breeder_filter, openmc.ParticleFilter(['photon'])]
-            tally_local_heating_outer_multiplier_neutron.filters = [mesh_filter, be12ti_outer_filter, openmc.ParticleFilter(['neutron'])]
-            tally_local_heating_outer_multiplier_photon.filters = [mesh_filter, be12ti_outer_filter, openmc.ParticleFilter(['photon'])]
-
+            tally_local_multiplication = openmc.Tally(name='local_multiplication', tally_id=31)
+            tally_local_multiplication.scores = ['(n,2n)']
+            tally_local_multiplication.nuclides = ['Be9']
             tally_local_multiplication.filters = [mesh_filter, be12ti_outer_filter]
 
             local_tallies_list = [
-                tally_local_flux,
+                tally_flux_heating,
                 tally_local_tbr,
-                tally_local_heating_neutron,
-                tally_local_heating_photon,
-                tally_local_heating_structure_neutron,
-                tally_local_heating_structure_photon,
-                tally_local_heating_breeder_neutron,
-                tally_local_heating_breeder_photon,
-                tally_local_heating_outer_multiplier_neutron,
-                tally_local_heating_outer_multiplier_photon,
                 tally_local_multiplication,
             ]
 
@@ -702,7 +655,7 @@ class NuclearFusion:
             raise
 
     # Source 시각화
-    def preview_source_distribution(self, plots_folder='plots', n_samples=1000):
+    def preview_source_distribution(self, plots_folder='plots', n_samples=500):
         try:
             if self.settings is None or self.settings.source is None:
                 print("Error: Settings or source is not defined yet.")
