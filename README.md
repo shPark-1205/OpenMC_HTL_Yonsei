@@ -2,15 +2,17 @@
 >Paul K. Romano, Nicholas E. Horelik, Bryan R. Herman, Adam G. Nelson, Benoit Forget, and Kord Smith, “OpenMC: A State-of-the-Art Monte Carlo Code for Research and Development,” Ann. Nucl. Energy, 82, 90–97 (2015).
 ---
 
-# Setting up OpenMC for Nuclear Fusion Simulation
+# OpenMC workflow for Nuclear Fusion
+
+---
 
 ## This workflow is based on the OpenMC and developed by Seong-Hyeok Park @ HTL, Yonsei University, Republic of Korea.
 
 ### *okayshpark@yonsei.ac.kr*
 
-#### * For detailed information, refer to instruction.txt file.
+#### * For detailed information, refer to Instruction folders.
 
-1. Fow Windows users, install Docker Desktop on your computer from https://www.docker.com/
+1. For Windows users, install Docker Desktop on your computer from https://www.docker.com/
 2. Build Docker image which contains OpenMC, DAGMC, LibMesh and necessary (or complimentary) Python packages from PSH.
 3. Install your preferred Python IDE, such as PyCharm.
 4. Configure your Python IDE to use the OpenMC Docker image as its Python interpreter.
