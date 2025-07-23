@@ -91,7 +91,7 @@ class PostproGUI:
         convert_button.pack(pady=20, fill='x')
 
     def _load_statepoint(self):
-        path = filedialog.askopenfilename(filetypes=[("HDF5 files", "*.h5")])
+        path = filedialog.askopenfilenames(filetypes=[("HDF5 files", "*.h5")])
         if not path:
             return
         self.statepoint_path.set(path)
