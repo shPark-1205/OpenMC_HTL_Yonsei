@@ -27,10 +27,20 @@ Coreform Cubit 프로그램을 통해 step 파일을 DAGMC 파일 (h5m)로 변�
 		- Command line: volume [volume ID] name "[Your_Cell_Name]"
 			ex) volume 3 name "cell_Breeder"
 	ㅇ 그룹 생성
-		- OpenMC에게 A라는 재료는 어떤 볼륨이라는 것을 전달하는 과정
+		- 만약 동일 재료를 여러 부품이 공유할 경우 그룹 생성 권장
+		- OpenMC에게 A라는 재료는 어떤 그룹이라는 것을 전달하는 과정
 		- Command line: group "mat:[Your_Material_Name]" add volume [Your_Corresponding_Volume_List]
 			ex) group "mat:He" add volume 3 4 5
 			주의!!! mat: 뒤에 작성하는 material name은 OpenMC에서 부여한 name="material_name"과 정확히 일치해야 함.
+	ㅇ 블록 생성
+	    - OpenMC에게 하나의 바디를 인식시키는 과정
+	    - Command line: block [block ID] add volume [volume ID]
+	        ex) block 1 add volume 1
+	        ex) block 1 add group 1
+	ㅇ 블록 재료 부여
+	    - OpenMC에게 블록 별 재료 지정하는 과정
+	    - Command line: block [block ID] material "[material name]"
+	        ex) block 1 material "tungsten"
 	ㅇ 격자 생성
 		- 옵션 1) Command line: surface all scheme trimesh\ mesh surface all
 		- 옵션 2) 오른쪽 GUI 창: Mode-Mesh, Entity-Surface, Action-Mesh 선택 후 수동으로 격자 생성
