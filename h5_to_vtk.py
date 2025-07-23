@@ -12,26 +12,25 @@ class PostproGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("OpenMC Post-Processor & VTK Converter")
-        self.root.geometry("1200x800")  # 창 크기 확장
+        self.root.geometry("1200x800")
 
-        # --- 변수 초기화 ---
+        # 변수 초기화
         self.statepoint_path = tk.StringVar()
         self.selected_score = tk.StringVar()
         self.sp_object = None  # 불러온 statepoint 객체를 저장할 변수
         self.current_tally = None
         self.current_df = None
         self.mat_id_to_name = {}
-        self.active_filters = []  # 사용자가 추가한 필터 조건을 저장할 리스트
+        self.active_filters = []
 
-        # --- GUI 위젯 생성 ---
+        # GUI 위젯 생성
         main_frame = ttk.Frame(root, padding="10")
         main_frame.pack(fill='both', expand=True)
 
         # 1. 파일 선택 프레임
         file_frame = ttk.LabelFrame(main_frame, text="1. Select Statepoint File")
         file_frame.pack(fill='x', pady=5)
-        ttk.Entry(file_frame, textvariable=self.statepoint_path, width=80).pack(side='left', fill='x', expand=True,
-                                                                                padx=5, pady=5)
+        ttk.Entry(file_frame, textvariable=self.statepoint_path, width=80).pack(side='left', fill='x', expand=True,padx=5, pady=5)
         ttk.Button(file_frame, text="Browse...", command=self._load_statepoint).pack(side='left', padx=5)
 
         # 2. Tally 선택 및 미리보기 프레임
@@ -41,7 +40,7 @@ class PostproGUI:
         tally_list_frame = ttk.Frame(tally_preview_frame)
         tally_list_frame.pack(side='left', fill='y', padx=5, pady=5)
         ttk.Label(tally_list_frame, text="Tally ID(s):").pack(anchor='w')
-        self.tally_listbox = tk.Listbox(tally_list_frame, selectmode=tk.EXTENDED, exportselection=False, height=10)
+        self.tally_listbox = tk.Listbox(tally_list_frame, selectmode=tk.EXTENDED, exportselection=False, height=20)
         self.tally_listbox.pack(fill='y', expand=True)
         self.tally_listbox.bind('<<ListboxSelect>>', self._on_tally_select)
 
@@ -72,8 +71,7 @@ class PostproGUI:
         self.filter_column_var = tk.StringVar()
         self.filter_value_var = tk.StringVar()
         ttk.Label(filter_builder_frame, text="Filter by:").pack(side='left')
-        self.filter_column_combobox = ttk.Combobox(filter_builder_frame, textvariable=self.filter_column_var,
-                                                   state='readonly', width=15)
+        self.filter_column_combobox = ttk.Combobox(filter_builder_frame, textvariable=self.filter_column_var,state='readonly', width=15)
         self.filter_column_combobox.pack(side='left', padx=5)
         ttk.Label(filter_builder_frame, text="==").pack(side='left')
         ttk.Entry(filter_builder_frame, textvariable=self.filter_value_var, width=15).pack(side='left', padx=5)
@@ -90,33 +88,45 @@ class PostproGUI:
         convert_button = ttk.Button(main_frame, text="Convert Selected Tallies to VTK...", command=self._convert_to_vtk)
         convert_button.pack(pady=20, fill='x')
 
+        # 5. 진행 상황 표시 프레임
+        status_frame = ttk.LabelFrame(main_frame, text="Status")
+        status_frame.pack(fill='x', pady=5)
+
+        self.progress_bar = ttk.Progressbar(status_frame, orient='horizontal', length=400, mode='determinate')
+        self.progress_bar.pack(fill='x', expand=True)
+
+        self.status_label = ttk.Label(status_frame, text="Ready")
+        self.status_label.pack(side='right')
+
     def _load_statepoint(self):
-        path = filedialog.askopenfilenames(filetypes=[("HDF5 files", "*.h5")])
-        if not path:
+        paths = filedialog.askopenfilenames(filetypes=[("HDF5 files", "*.h5")])
+        if not paths:
             return
-        self.statepoint_path.set(path)
+
+        self.statepoint_paths = paths
+        self.statepoint_path.set(paths[0] + "...")
 
         try:
-            # --- ⬇️ 이 부분이 수정된 내용입니다 ⬇️ ---
-            # 1. statepoint 객체를 먼저 로드합니다.
-            self.sp_object = openmc.StatePoint(path)
+            # statepoint 파일 로드
+            # Tally 목록은 첫 번째 statepoint 파일 기준으로 생성
+            first_file_path = paths[0]
+            self.sp_object = openmc.StatePoint(first_file_path)
 
-            # 2. summary.h5 파일의 예상 경로를 만듭니다.
-            #    statepoint 파일과 같은 폴더에 있다고 가정합니다.
-            sp_dir = os.path.dirname(path)
+            # summary.h5 파일의 예상 경로 생성
+            # statepoint 파일과 같은 폴더
+            sp_dir = os.path.dirname(first_file_path)
             summary_path = os.path.join(sp_dir, 'summary.h5')
 
-            # 3. os.path.exists로 summary.h5 파일이 실제로 있는지 확인합니다.
+            # os.path.exists로 summary.h5 파일 확인
             if os.path.exists(summary_path):
                 summary = openmc.Summary(summary_path)
                 self.mat_id_to_name = {m.id: m.name for m in summary.materials}
             else:
-                # summary.h5 파일이 없는 경우, 경고를 출력하고 빈 맵을 사용합니다.
+                # summary.h5 파일이 없는 경우, 경고를 출력하고 빈 맵을 사용
                 print(f"Warning: summary.h5 not found at '{summary_path}'. Material names will not be available.")
                 self.mat_id_to_name = {}
-            # --- ⬆️ 수정 완료 ⬆️ ---
 
-            # 4. Tally 목록을 읽어 Listbox를 채웁니다. (기존과 동일)
+            # Tally 목록을 읽어 Listbox를 채우기
             tally_info = [f"{t.id}: {t.name}" for t in self.sp_object.tallies.values()]
             self.tally_listbox.delete(0, tk.END)
             if not tally_info:
@@ -138,35 +148,42 @@ class PostproGUI:
             selected_info_string = self.tally_listbox.get(selected_indices[0])
             tally_id = int(selected_info_string.split(':')[0])
 
-            # 1. Tally 객체와 원본 DataFrame을 가져와 클래스 속성에 저장
+            # 로딩중 메세지 표시
+            self.tree.delete(*self.tree.get_children())
+            self.tree["columns"] = ("Status",)
+            self.tree.heading("Status", text="Status")
+            self.tree.column("Status", anchor='center')
+            self.tree.insert("", "end", values=("Loading data... Please wait.",))
+            self.root.update_idletasks()
+
+            # ally 객체와 원본 DataFrame을 가져와 클래스 속성에 저장
             self.current_tally = self.sp_object.get_tally(id=tally_id)
             df = self.current_tally.get_pandas_dataframe()
             self.current_df = df
 
-            # --- Treeview 업데이트 ---
+            # Treeview 업데이트
             self.tree.delete(*self.tree.get_children())
 
-            # 2. DataFrame의 열 구조(MultiIndex 또는 일반)에 따라 컬럼 이름 설정
+            # DataFrame의 열 구조(MultiIndex 또는 일반)에 따라 컬럼 이름 설정
             is_multi_index = isinstance(df.columns, pd.MultiIndex)
             if is_multi_index:
                 columns = [col[0] if col[1] == '' else f"{col[0]} ({col[1]})" for col in df.columns]
                 filter_cols = [col[0] for col in df.columns if
-                               col[0] not in ['nuclide', 'score', 'mean', 'std. dev.'] and not col[0].startswith(
-                                   'mesh')]
+                               col[0] not in ['nuclide', 'score', 'mean', 'std. dev.'] and not col[0].startswith('mesh')]
             else:
                 columns = list(df.columns)
                 filter_cols = [col for col in df.columns if col not in ['nuclide', 'score', 'mean', 'std. dev.']]
 
-            # 3. Treeview에 컬럼과 원본 데이터 채우기
+            # Treeview에 컬럼과 원본 데이터 채우기
             self.tree["columns"] = columns
             for col in columns:
                 self.tree.heading(col, text=col)
                 self.tree.column(col, width=120, anchor='center')
 
-            for _, row in df.head(200).iterrows():  # 200개 행 미리보기
+            for _, row in df.head(50).iterrows():  # 50개 행 미리보기
                 self.tree.insert("", "end", values=list(row))
 
-            # --- 콤보박스 업데이트 ---
+            # 콤보박스 업데이트
             self.score_combobox['values'] = self.current_tally.scores
             if self.current_tally.scores:
                 self.selected_score.set(self.current_tally.scores[0])
@@ -209,52 +226,80 @@ class PostproGUI:
             del self.active_filters[index]
 
     def _convert_to_vtk(self):
-        score_to_plot = self.selected_score.get()
-        if not self.current_tally or not score_to_plot:
-            messagebox.showerror("Error", "Please select a Tally and a Score.")
+        # 선택된 파일 경로 목록과 Tally ID 인덱스 불러오기
+        paths = self.statepoint_paths
+        selected_indices = self.tally_listbox.curselection()
+
+        if not hasattr(self, 'statepoint_paths') or not self.statepoint_paths or not selected_indices:
+            messagebox.showerror("Error", "Please select a statepoint file(s) and select at least one tally.")
             return
 
         output_dir = filedialog.askdirectory(title="Select a folder to save VTK files")
         if not output_dir: return
 
-        print(f"\n--- Processing Tally ID: {self.current_tally.id} ---")
-        try:
-            mesh = self.current_tally.find_filter(openmc.MeshFilter).mesh
-            df = self.current_df  # 원본 데이터 사용
+        print(f"\n--- Starting batch VTK conversion ---")
 
-            # --- 동적 필터링 적용 ---
-            filtered_df = df.copy()
-            for column, value in self.active_filters:
-                col_key = (column, '') if isinstance(df.columns, pd.MultiIndex) else column
-                filter_value = float(value) if column == 'material' else value
-                filtered_df = filtered_df[filtered_df[col_key] == filter_value]
+        # --- ⬇️ 중첩된 반복문을 하나로 수정 ⬇️ ---
+        total_files = len(paths)
+        self.progress_bar['maximum'] = total_files
+        self.progress_bar['value'] = 0
 
-            # --- Score 필터링 ---
-            score_key = ('score', '') if isinstance(df.columns, pd.MultiIndex) else 'score'
-            filtered_df = filtered_df[filtered_df[score_key] == score_to_plot]
+        # enumerate를 사용하여 파일 인덱스(i)와 경로(sp_path)를 한 번에 가져옵니다.
+        for i, sp_path in enumerate(paths):
+            try:
+                # GUI 상태 업데이트
+                base_filename = os.path.basename(sp_path)
+                status_text = f"Processing file {i + 1}/{total_files}: {base_filename}"
+                self.status_label.config(text=status_text)
+                # update_idletasks()는 루프의 시작 부분에서 한 번만 호출하는 것이 효율적입니다.
+                self.root.update_idletasks()
 
-            if filtered_df.empty:
-                print(" -> No data found with the selected filters. Skipping.")
-                return
+                # 파일 처리 로직
+                sp = openmc.StatePoint(sp_path)
+                base_filename_no_ext = os.path.splitext(base_filename)[0]
+                print(f"\n--- Processing File: {base_filename} ---")
 
-            # --- 배열 생성 및 데이터 채우기 ---
-            full_mesh_data = np.zeros(mesh.dimension)
-            for _, row in filtered_df.iterrows():
-                idx = int(row[('mesh 1', 'x')]) - 1
-                idy = int(row[('mesh 1', 'y')]) - 1
-                idz = int(row[('mesh 1', 'z')]) - 1
-                mean_value = row[('mean', '')]
-                full_mesh_data[idx, idy, idz] = mean_value
+                # 해당 파일 내에서 선택된 Tally ID에 대해 반복
+                for index in selected_indices:
+                    tally_id_str = self.tally_listbox.get(index)
+                    tally_id = int(tally_id_str.split(':')[0])
 
-            # --- VTK 파일 저장 ---
-            output_filename = os.path.join(output_dir, f"tally_{self.current_tally.id}_{score_to_plot}.vtk")
-            mesh.write_data_to_vtk(filename=output_filename, datasets={score_to_plot: full_mesh_data})
-            print(f" -> Saved {output_filename}")
-            messagebox.showinfo("Success", f"VTK conversion complete!\nFile saved to {output_filename}")
+                    try:
+                        tally = sp.get_tally(id=tally_id)
+                        mesh_filter_obj = tally.find_filter(openmc.MeshFilter)
 
-        except Exception as e:
-            traceback.print_exc()
-            messagebox.showwarning("Processing Error", f"Could not process Tally ID {self.current_tally.id}:\n{e}")
+                        if mesh_filter_obj is None:
+                            print(f"  -> Skipping Tally ID {tally_id} ('{tally.name}') as it has no MeshFilter.")
+                            continue
+                        mesh = mesh_filter_obj.mesh
+
+                        df = tally.get_pandas_dataframe()
+                        full_mesh_data = np.zeros(mesh.dimension)
+
+                        for _, row in df.iterrows():
+                            idx = int(row[('mesh 1', 'x')]) - 1
+                            idy = int(row[('mesh 1', 'y')]) - 1
+                            idz = int(row[('mesh 1', 'z')]) - 1
+                            mean_value = row[('mean', '')]
+                            full_mesh_data[idx, idy, idz] = mean_value
+
+                        output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}.vtk")
+                        mesh.write_data_to_vtk(filename=output_filename, datasets={tally.name: full_mesh_data})
+                        print(f" -> Saved {output_filename}")
+
+                    except Exception as e:
+                        print(f"  -> Failed to process Tally ID {tally_id}: {e}")
+
+                # 진행률 표시줄 업데이트
+                self.progress_bar['value'] = i + 1
+
+            except Exception as e:
+                print(f"  -> Failed to load or process file {sp_path}: {e}")
+        # --- ⬆️ 수정 완료 ⬆️ ---
+
+        self.status_label.config(text=f"Batch conversion complete! {total_files} files processed.")
+        messagebox.showinfo("Success", f"Batch conversion complete! Files are saved in:\n{output_dir}")
+        print("\nAll selected tasks are complete!")
 
 
 if __name__ == '__main__':
