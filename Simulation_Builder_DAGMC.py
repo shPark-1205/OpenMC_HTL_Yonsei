@@ -50,26 +50,8 @@ class NuclearFusion:
             # config 객체를 클래스 속성으로 저장
             self.config = config
 
-            # 해석에 사용할 재료를 먼저 생성해야 함. 재료가 nmm에 정의되어 있는 이름대로 작성
-            self.material_configs = [
-                {'id': 100, 'name': 'eurofer', 'kwargs': {}},
-
-                # 유체는 온도/압력 정의 필수
-                {'id': 200, 'name': 'He', 'kwargs': {
-                    'temperature': self.config['materials']['he']['temperature'],
-                    'pressure': self.config['materials']['he']['pressure']
-                }},
-                {'id': 301, 'name': 'tungsten', 'kwargs': {}},
-
-                # 증식재의 Li6 enrichment정의 가능
-                {'id': 402, 'name': 'Li4SiO4', 'kwargs': {
-                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
-                }},
-                {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
-                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
-                }},
-                {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
-            ]
+            # 해석에 사용할 재료를 임시로 저장
+            self.material_configs = []
 
             # 사용할 모든 재료를 openmc.Materia 객체로 저장할 딕셔너리
             self.materials = {}
