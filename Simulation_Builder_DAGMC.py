@@ -84,6 +84,7 @@ class NuclearFusion:
             # Docker image 안에 OpenMC 공식 library(ENDF/B-VII.1 및 JEFF 3.3)를 넣어 놨음.
             # https://openmc.org/official-data-libraries/
             openmc.config['cross_sections'] = cross_section_path
+            self.cross_section_path = cross_section_path # define_settings 메소드에서 photon_transport 제어하기 위해 정의
 
         except Exception as e:
             print(f"\n\nError during NuclearFusion class initialization: {e}\n")
