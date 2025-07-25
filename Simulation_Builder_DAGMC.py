@@ -181,6 +181,25 @@ class NuclearFusion:
                     openmc_materials_list.append(he_outer_mat)
                     print(f"  -> Created 'He_outer' (ID: {he_outer_mat.id})")
 
+                elif mat_name == 'Be12Ti':
+                    print(f"Cloning material: {mat_name} for different components...\n")
+
+                    # Inner Be12Ti 용
+                    be12ti_inner_mat = openmc_mat.clone()
+                    be12ti_inner_mat.id = 501
+                    be12ti_inner_mat.name = 'Be12Ti_inner'
+                    self.materials['Be12Ti_inner'] = be12ti_inner_mat
+                    openmc_materials_list.append(be12ti_inner_mat)
+                    print(f"  -> Created 'Be12Ti_inner' (ID: {be12ti_inner_mat.id})")
+
+                    # Outer Be12Ti 용
+                    be12ti_outer_mat = openmc_mat.clone()
+                    be12ti_outer_mat.id = 502
+                    be12ti_outer_mat.name = 'Be12Ti_outer'
+                    self.materials['Be12Ti_outer'] = be12ti_outer_mat
+                    openmc_materials_list.append(be12ti_outer_mat)
+                    print(f"  -> Created 'Be12Ti_outer' (ID: {be12ti_outer_mat.id})")
+
                 else:
                     openmc_mat.id = mat_id
                     self.materials[mat_name] = openmc_mat
