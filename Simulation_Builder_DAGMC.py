@@ -81,7 +81,7 @@ class NuclearFusion:
             # Mesh Tally 설정 시 Cell 이름과 ID 매칭 용도
             self.cell_name_to_id = {}
             
-            # Docker image 안에 OpenMC 공식 library(ENDF/B-VII.1 및 JEFF 3.3)를 넣어 놨음.
+            # Docker image 안에 OpenMC 공식 library(ENDF/B-VII.1, JEFF 3.3, FENDL 3.2)를 넣어 놨음.
             # https://openmc.org/official-data-libraries/
             openmc.config['cross_sections'] = cross_section_path
             self.cross_section_path = cross_section_path # define_settings 메소드에서 photon_transport 제어하기 위해 정의
@@ -104,7 +104,27 @@ class NuclearFusion:
             # 증식재 혼합물 만들기 위해 임시로 저장하는 곳
             nmm_materials_temp = {}
 
-            # __init__ 메소드에서 만들었던 재료 목록 가져오기
+            self.material_configs = [
+                {'id': 100, 'name': 'eurofer', 'kwargs': {}},
+
+                # 유체는 온도/압력 정의 필수
+                {'id': 200, 'name': 'He', 'kwargs': {
+                    'temperature': self.config['materials']['he']['temperature'],
+                    'pressure': self.config['materials']['he']['pressure']
+                }},
+                {'id': 301, 'name': 'tungsten', 'kwargs': {}},
+
+                # 증식재의 Li6 enrichment정의 가능
+                {'id': 402, 'name': 'Li4SiO4', 'kwargs': {
+                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
+                }},
+                {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
+                    'enrichment': self.config['materials']['breeder']['li_enrichment'],
+                }},
+                {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
+            ]
+
+            # 임시 재료 목록 가져오기
             for mat_config in self.material_configs:
                 mat_id = mat_config['id']
                 mat_name = mat_config['name']
@@ -215,24 +235,24 @@ class NuclearFusion:
 
             print(f"Mixed material breeder_pebble_mix created (OpenMC ID: {mixed_openmc_material.id}).")
 
-            # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
-            print(f"\nCreating material: Be12Ti...")
-            Be12Ti_inner_mat = openmc.Material(name='Be12Ti_inner', material_id=501)
-            Be12Ti_inner_mat.add_elements_from_formula('Be12Ti')
-            Be12Ti_inner_mat.set_density('g/cm3', 2.27)
-            Be12Ti_inner_mat.temperature = 400
-
-            # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
-            Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
-            self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
-            openmc_materials_list.append(Be12Ti_inner_mat)
-
-            print(f"\nCloning material: Be12Ti...")
-            Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
-            Be12Ti_outer_mat.id = 502
-            Be12Ti_outer_mat.name = 'Be12Ti_outer'
-            self.materials['Be12Ti_outer'] = Be12Ti_outer_mat
-            openmc_materials_list.append(Be12Ti_outer_mat)
+            # # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
+            # print(f"\nCreating material: Be12Ti...")
+            # Be12Ti_inner_mat = openmc.Material(name='Be12Ti_inner', material_id=501)
+            # Be12Ti_inner_mat.add_elements_from_formula('Be12Ti')
+            # Be12Ti_inner_mat.set_density('g/cm3', 2.27)
+            # Be12Ti_inner_mat.temperature = 400
+            #
+            # # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
+            # Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
+            # self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
+            # openmc_materials_list.append(Be12Ti_inner_mat)
+            #
+            # print(f"\nCloning material: Be12Ti...")
+            # Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
+            # Be12Ti_outer_mat.id = 502
+            # Be12Ti_outer_mat.name = 'Be12Ti_outer'
+            # self.materials['Be12Ti_outer'] = Be12Ti_outer_mat
+            # openmc_materials_list.append(Be12Ti_outer_mat)
 
             # 모든 OpenMC Material 객체들을 openmc.Materials 컬렉션으로 묶음
             self.all_materials_collection = openmc.Materials(openmc_materials_list)
@@ -339,10 +359,10 @@ class NuclearFusion:
 
             # FENDL library에는 동위원소에 대한 photon 데이터가 없으므로 비활성화
             if 'fendl' in self.cross_section_path.lower():
-                print("--- FENDL library detected. Disabling photon_transport. ---")
+                print("FENDL library detected. Disabling photon_transport.\n")
                 self.settings.photon_transport = False
             else: # ENDF/JEFF는 동위원소에 대한 photon library가 모두 있으니 활성화
-                print("--- ENDF/JEFF library detected. Enabling photon_transport. ---")
+                print("ENDF/JEFF library detected. Enabling photon_transport.\n")
                 self.settings.photon_transport = True
 
             # Tracking할 particle 지정
@@ -461,10 +481,9 @@ class NuclearFusion:
 
             # cross_section.xml에 유체의 모든 온도 데이터가 없으므로, 설정한 온도와 가장 가까운 곳의 온도 데이터 사용
             self.settings.temperature = {
-                'method': 'interpolation',
-                'range': [250.0, 2500.0],
+                'method': 'nearest',
                 'default': 600.0,
-                'tolerance': 200.0
+                'tolerance': 1000.0
             }
 
             # 해석 후 결과 파일로 statepoint.h5 파일 외에 summary.h5 파일과 tallies.out 파일도 같이 저장
