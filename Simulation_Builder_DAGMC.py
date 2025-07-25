@@ -235,25 +235,6 @@ class NuclearFusion:
 
             print(f"Mixed material breeder_pebble_mix created (OpenMC ID: {mixed_openmc_material.id}).")
 
-            # # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
-            # print(f"\nCreating material: Be12Ti...")
-            # Be12Ti_inner_mat = openmc.Material(name='Be12Ti_inner', material_id=501)
-            # Be12Ti_inner_mat.add_elements_from_formula('Be12Ti')
-            # Be12Ti_inner_mat.set_density('g/cm3', 2.27)
-            # Be12Ti_inner_mat.temperature = 400
-            #
-            # # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
-            # Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
-            # self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
-            # openmc_materials_list.append(Be12Ti_inner_mat)
-            #
-            # print(f"\nCloning material: Be12Ti...")
-            # Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
-            # Be12Ti_outer_mat.id = 502
-            # Be12Ti_outer_mat.name = 'Be12Ti_outer'
-            # self.materials['Be12Ti_outer'] = Be12Ti_outer_mat
-            # openmc_materials_list.append(Be12Ti_outer_mat)
-
             # 모든 OpenMC Material 객체들을 openmc.Materials 컬렉션으로 묶음
             self.all_materials_collection = openmc.Materials(openmc_materials_list)
 
