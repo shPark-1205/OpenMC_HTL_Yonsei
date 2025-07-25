@@ -53,6 +53,8 @@ def main():
             cs_path = r'/app/data/endfb-vii.1-hdf5/cross_sections.xml'
         elif cs_choice == "jeff":
             cs_path = r'/app/data/jeff-3.3-hdf5/cross_sections.xml'
+        elif cs_choice == "fendl":
+            cs_path = r'/app/data/fendl-3.2-hdf5/cross_sections.xml'
         else:
             print("\n\nInvalid cross section choice. Exiting program.")
 
