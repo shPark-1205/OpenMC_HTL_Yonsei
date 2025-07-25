@@ -10,7 +10,7 @@
 
 ### *okayshpark@yonsei.ac.kr*
 
-#### * For detailed information, refer to Instruction folders.
+#### * For detailed information, refer to Instructions folder.
 
 1. For Windows users, install Docker Desktop on your computer from https://www.docker.com/
 2. Build Docker image which contains OpenMC, DAGMC, LibMesh and necessary (or complimentary) Python packages from PSH.
