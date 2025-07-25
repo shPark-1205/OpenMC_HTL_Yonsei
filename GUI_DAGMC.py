@@ -188,7 +188,7 @@ class SourceSelectionWindow:
         rb_endf.grid(row=0, column=0, sticky='w')
         rb_jeff = tk.Radiobutton(cs_frame, text="JEFF-3.3", font=self.button_font, variable=self.cross_section_choice, value="jeff")
         rb_jeff.grid(row=0, column=1, sticky='w')
-        rb_fendl = tk.Radiobutton(cs_frame, text="FENDL-3.2", font=self.button_font, variable=self.cross_section_choice, value="fendl")
+        rb_fendl = tk.Radiobutton(cs_frame, text="FENDL-3.2 (No photon_transport)", font=self.button_font, variable=self.cross_section_choice, value="fendl")
         rb_fendl.grid(row=0, column=2, sticky='w')
 
         # 위젯 생성 및 배치
