@@ -68,6 +68,7 @@ class NuclearFusion:
                 {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
                 }},
+                {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
             ]
 
             # 사용할 모든 재료를 openmc.Materia 객체로 저장할 딕셔너리
