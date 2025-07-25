@@ -245,7 +245,7 @@ class NuclearFusion:
             print(f"\n\nError in define_materials method: {e}\n")
             raise
 
-    # 해석에 사용할 형상 정의 (surface, region, cell 헬퍼 함수를 참조)
+    # 해석에 사용할 형상 정의
     def define_geometry(self):
         # https://docs.openmc.org/en/v0.15.2/usersguide/geometry.html
         """
