@@ -336,8 +336,13 @@ class NuclearFusion:
             # 작은 해석 : 50~100개, 큰 해석 : 수 백개 정도면 충분
             self.settings.inactive = sim_config['inactive']
 
-            # Photon transport 해석 추가
-            self.settings.photon_transport = True
+            # FENDL library에는 동위원소에 대한 photon 데이터가 없으므로 비활성화
+            if 'fendl' in self.cross_section_path.lower():
+                print("--- FENDL library detected. Disabling photon_transport. ---")
+                self.settings.photon_transport = False
+            else: # ENDF/JEFF는 동위원소에 대한 photon library가 모두 있으니 활성화
+                print("--- ENDF/JEFF library detected. Enabling photon_transport. ---")
+                self.settings.photon_transport = True
 
             # Tracking할 particle 지정
             self.settings.track = [
