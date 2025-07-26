@@ -447,7 +447,7 @@ class NuclearFusion:
                 # Hexagonal Face 소스는 여러 개의 point 소스가 있으니 PointCloud 함수
                 elif space_options["type"] == "Hexagonal Face":
                     source_positions = create_hexagonal_source_points(
-                        n_points=sim_config['n_particles'], # 충분한 수의 샘플 수 필요
+                        n_points=sim_config['n_source_points'], # 충분한 수의 샘플 수 필요
                         x_coord=space_options["x_coord"],
                         pitch=space_options["pitch"],
                     )
