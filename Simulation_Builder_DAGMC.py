@@ -582,9 +582,21 @@ class NuclearFusion:
 
             mesh_filter = openmc.MeshFilter(mesh, filter_id=99)
 
-            tally_flux_heating = openmc.Tally(name='flux_heating', tally_id=11)
-            tally_flux_heating.scores = ['flux', 'heating']
-            tally_flux_heating.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron', 'photon'])]
+            # tally_flux_heating = openmc.Tally(name='flux_heating', tally_id=11)
+            # tally_flux_heating.scores = ['flux', 'heating']
+            # tally_flux_heating.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron', 'photon'])]
+
+            tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=11)
+            tally_local_heating_breeder.scores = ['heating']
+            tally_local_heating_breeder.filters = [mesh_filter, breeder_filter]
+
+            tally_local_heating_eurofer = openmc.Tally(name='local_heating_eurofer', tally_id=12)
+            tally_local_heating_eurofer.scores = ['heating']
+            tally_local_heating_eurofer.filters = [mesh_filter, eurofer_filter]
+
+            tally_local_heating_Be12Ti = openmc.Tally(name='local_heating_Be12Ti', tally_id=13)
+            tally_local_heating_Be12Ti.scores = ['heating']
+            tally_local_heating_Be12Ti.filters = [mesh_filter, be12ti_outer_filter]
 
             tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
             tally_local_tbr.scores = ['H3-production']
