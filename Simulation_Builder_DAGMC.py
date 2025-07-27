@@ -522,6 +522,7 @@ class NuclearFusion:
             breeder_filter = openmc.MaterialFilter([breeder_object], filter_id=21)
             be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object], filter_id=31)
             be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object], filter_id=32)
+            eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object], filter_id=41)
 
             # 에너지 filter
             energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
