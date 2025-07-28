@@ -121,7 +121,7 @@ class NuclearFusion:
                 {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
                 }},
-                {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
+                # {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
             ]
 
             # 임시 재료 목록 가져오기
@@ -184,24 +184,24 @@ class NuclearFusion:
                     openmc_materials_list.append(he_outer_mat)
                     print(f"  -> Created 'He_outer' (ID: {he_outer_mat.id})")
 
-                elif mat_name == 'Be12Ti':
-                    print(f"Cloning material: {mat_name} for different components...\n")
-
-                    # Inner Be12Ti 용
-                    be12ti_inner_mat = openmc_mat.clone()
-                    be12ti_inner_mat.id = 501
-                    be12ti_inner_mat.name = 'Be12Ti_inner'
-                    self.materials['Be12Ti_inner'] = be12ti_inner_mat
-                    openmc_materials_list.append(be12ti_inner_mat)
-                    print(f"  -> Created 'Be12Ti_inner' (ID: {be12ti_inner_mat.id})")
-
-                    # Outer Be12Ti 용
-                    be12ti_outer_mat = openmc_mat.clone()
-                    be12ti_outer_mat.id = 502
-                    be12ti_outer_mat.name = 'Be12Ti_outer'
-                    self.materials['Be12Ti_outer'] = be12ti_outer_mat
-                    openmc_materials_list.append(be12ti_outer_mat)
-                    print(f"  -> Created 'Be12Ti_outer' (ID: {be12ti_outer_mat.id})")
+                # elif mat_name == 'Be12Ti':
+                #     print(f"Cloning material: {mat_name} for different components...\n")
+                #
+                #     # Inner Be12Ti 용
+                #     be12ti_inner_mat = openmc_mat.clone()
+                #     be12ti_inner_mat.id = 501
+                #     be12ti_inner_mat.name = 'Be12Ti_inner'
+                #     self.materials['Be12Ti_inner'] = be12ti_inner_mat
+                #     openmc_materials_list.append(be12ti_inner_mat)
+                #     print(f"  -> Created 'Be12Ti_inner' (ID: {be12ti_inner_mat.id})")
+                #
+                #     # Outer Be12Ti 용
+                #     be12ti_outer_mat = openmc_mat.clone()
+                #     be12ti_outer_mat.id = 502
+                #     be12ti_outer_mat.name = 'Be12Ti_outer'
+                #     self.materials['Be12Ti_outer'] = be12ti_outer_mat
+                #     openmc_materials_list.append(be12ti_outer_mat)
+                #     print(f"  -> Created 'Be12Ti_outer' (ID: {be12ti_outer_mat.id})")
 
                 else:
                     openmc_mat.id = mat_id
@@ -209,6 +209,25 @@ class NuclearFusion:
                     nmm_materials_temp[mat_name] = nmm_mat
                     openmc_materials_list.append(openmc_mat)
                     print(f"Material {mat_name} loaded (OpenMC ID: {openmc_mat.id}).")
+
+            # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
+            print(f"\nCreating material: Be12Ti...")
+            Be12Ti_inner_mat = openmc.Material(name='Be12Ti_inner', material_id=501)
+            Be12Ti_inner_mat.add_elements_from_formula('Be12Ti')
+            Be12Ti_inner_mat.set_density('g/cm3', 2.27)
+            Be12Ti_inner_mat.temperature = 400
+
+            # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
+            Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
+            self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
+            openmc_materials_list.append(Be12Ti_inner_mat)
+
+            print(f"\nCloning material: Be12Ti...")
+            Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
+            Be12Ti_outer_mat.id = 502
+            Be12Ti_outer_mat.name = 'Be12Ti_outer'
+            self.materials['Be12Ti_outer'] = Be12Ti_outer_mat
+            openmc_materials_list.append(Be12Ti_outer_mat)
 
             # 위에서 생성한 기본 재료들을 사용하여 혼합물 생성
             print("\nCreating mixed material (Li4SiO4 + Li2TiO3)...")
