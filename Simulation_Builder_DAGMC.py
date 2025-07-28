@@ -567,6 +567,11 @@ class NuclearFusion:
             tally_multiplying.filters = [be12ti_outer_filter]
             self.tallies.append(tally_multiplying)
 
+            tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=999)
+            tally_breeder_flux.scores = ['flux']
+            tally_breeder_flux.filters = [breeder_filter, openmc.ParticleFilter(['neutron'])]
+            self.tallies.append(tally_breeder_flux)
+
             '''여기부터는 local Tally'''
 
             # Local Tally 계산을 위한 mesh 생성
