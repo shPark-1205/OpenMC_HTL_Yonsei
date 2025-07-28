@@ -646,7 +646,30 @@ class NuclearFusion:
             print("\n\n\n--- Generating 2D geometry plots with axes using geometry.plot() ---")
 
             # Plot에 사용할 색상을 재료에 부여
-            material_color_map = {
+            # print("1")
+            # plot_xy = plot_axis_slice(
+            #     dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
+            #     view_direction='-z',
+            #     plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
+            # )
+            #
+            # plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
+            # print("XY geometry plot with axes saved.\n")
+            #
+            # print("2")
+            # plot_yz = plot_axis_slice(
+            #     dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
+            #     view_direction='x',
+            #     plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
+            # )
+            #
+            # plot_yz.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
+            # print("YZ geometry plot with axes saved.\n")
+
+
+            print("Generating material-colored plot with openmc.plot_geometry...")
+
+            material_colors = {
                 self.materials['eurofer_pressure_tube']: (128, 128, 128),  # 회색
                 self.materials['eurofer_pin']: (128, 128, 128),  # 회색
                 self.materials['eurofer_first_wall_channel']: (128, 128, 128),  # 회색
@@ -655,28 +678,40 @@ class NuclearFusion:
                 self.materials['breeder_pebble_mix']: (255, 0, 0),  # 빨간색
                 self.materials['He_inner']: (0, 0, 255),  # 파란색
                 self.materials['He_outer']: (0, 0, 255),  # 파란색
-                self.materials['tungsten']: (128, 0, 128) # 보라색
+                self.materials['tungsten']: (128, 0, 128)  # 보라색
             }
 
-            print("1")
-            plot_xy = plot_axis_slice(
-                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
-                view_direction='-z',
-                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
-            )
+            # Plot 객체 생성
+            plot_xy = openmc.Plot()
+            plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
+            plot_xy.width = (50.0, 20.0)
+            plot_xy.pixels = (1600, 800)
+            plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
+            plot_xy.basis = 'xy'
+            plot_xy.color_by = 'material'
 
-            plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
-            print("XY geometry plot with axes saved.\n")
+            # 재료별 색상 지정
+            plot_xy.colors = material_colors
 
-            print("2")
-            plot_yz = plot_axis_slice(
-                dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
-                view_direction='x',
-                plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
-            )
+            plot_yz = openmc.Plot()
+            plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
+            plot_yz.width = (20.0, 20.0)
+            plot_yz.pixels = (800, 800)
+            plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
+            plot_yz.basis = 'yz'
+            plot_yz.color_by = 'material'
 
-            plot_yz.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
-            print("YZ geometry plot with axes saved.\n")
+            plot_yz.colors = material_colors
+
+            # 플롯 생성
+            plots = openmc.Plots([plot_xy, plot_yz])
+            plots.export_to_xml()  # plots.xml 생성
+
+            # geometry.xml과 materials.xml이 이미 생성된 상태여야 함
+            openmc.plot_geometry()
+
+            print(f" -> Material-colored plots saved.\n")
+
 
 
         except Exception as e:
