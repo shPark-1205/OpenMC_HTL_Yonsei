@@ -274,6 +274,26 @@ class PostproGUI:
                         mesh = mesh_filter_obj.mesh
 
                         df = tally.get_pandas_dataframe()
+
+                        # 불러온 tally의 pandas dataframe에 동적 필터 적용
+                        filtered_df = df.copy()
+                        is_multi_index = isinstance(df.columns, pd.MultiIndex)
+
+                        for column, value in self.active_filters:
+                            col_key = (column, '') if is_multi_index else column
+                            filter_value = float(value) if column in ['material', 'cell', 'universe'] else value
+                            filtered_df = filtered_df[filtered_df[col_key] == filter_value]
+
+                        # 사용자가 내보내기 할 score 필터 적용
+                        score_key = ('score', '') if is_multi_index else 'score'
+                        filtered_df = filtered_df[filtered_df[score_key] == score_to_plot]
+
+                        # 선택한 tally와 사용자가 지정한 filter가 겹치지 않는 경우
+                        if filtered_df.empty:
+                            print(f"  -> No data found for Tally ID {tally_id} ('{tally.name}') with the selected filters. Skipping.")
+                            continue
+
+                        # 해석에 사용한 mesh를 만들고 모두 0으로 채우기
                         full_mesh_data = np.zeros(mesh.dimension)
 
                         for _, row in df.iterrows():
