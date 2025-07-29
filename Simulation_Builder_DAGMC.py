@@ -12,7 +12,7 @@ from openmc_source_plotter import plot_source_energy, plot_source_position, plot
 from dagmc_geometry_slice_plotter import plot_axis_slice
 
 # Periodic 육각기둥 내부 단면에 무작위 위치의 중성자 소스 분포
-def create_hexagonal_source_points(n_points, x_coord, pitch):
+def create_hexagonal_source_points(n_points, z_coord, pitch):
 
     points =[]
 
@@ -20,21 +20,21 @@ def create_hexagonal_source_points(n_points, x_coord, pitch):
     s = pitch * (2.0 / 3.0)
 
     # 육각형을 포함하는 가장 작은 사각형 생성
-    x = x_coord
+    z = z_coord
+    abs_x_max = s * (np.sqrt(3.0) / 2.0)
     abs_y_max = s
-    abs_z_max = s * (np.sqrt(3.0) / 2.0)
 
-    print(f"\nGenerating {n_points} source points on a hexagonal face at x={x_coord}...")
+    print(f"\nGenerating {n_points} source points on a hexagonal face at x={z_coord}...")
 
     while len(points) < n_points:
 
         # 사각형 안에서 무작위 샘플링
+        x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
-        z = np.random.uniform(-abs_z_max, abs_z_max)
 
         is_inside = (abs(y) <= s) and \
-                    (abs(np.sqrt(3.0) * y + z) <= s * np.sqrt(3)) and \
-                    (abs(-np.sqrt(3.0) * y + z) <= s * np.sqrt(3))
+                    (abs(np.sqrt(3.0) * y + x) <= s * np.sqrt(3)) and \
+                    (abs(-np.sqrt(3.0) * y + x) <= s * np.sqrt(3))
 
         if is_inside:
             points.append((x, y, z))
@@ -288,38 +288,38 @@ class NuclearFusion:
 
         print("\n\n\nDefining geometry with DAGMC from .h5m file...")
 
-        # CAD 형상을 충분히 감쌀 수 있는 크기의 경계 설정
-        z_height = self.config['bounding']['z_height']
-        y_width = self.config['bounding']['y_width']
-        x_min = self.config['bounding']['x_min']
-        x_max = self.config['bounding']['x_max']
-
-        # 최외곽 경계 사각기둥 생성
-        prism = openmc.model.RectangularPrism(
-            width=y_width,
-            height=z_height,
-            axis='x',
+        """
+        지금 해석 형상은 육각기둥 모양의 unit cell이기 때문에
+        DAGMC보다 아주 약간 큰 육각기둥을 만들고 periodic 경계 조건을 부여함.
+        만약 해석하고자 하는 형상이 육각기둥이 아니라면,
+        final_region을 본인 형상에 맞게 수정해야 함.
+        """
+        
+        # DAGMC 형상보다 약간 큰 region 생성
+        # HexagonalPrism은 z축 axis만 지원
+        hex_prism = openmc.model.HexagonalPrism(
+            edge_length=self.config['geometry']['pitch']+0.00001,
             origin=(0.0, 0.0),
+            orientation='y',
             boundary_type='periodic'
         )
 
-        # 사각기둥 끝을 닫을 x 평면
-        x_min_plane = openmc.XPlane(x0=x_min, boundary_type='vacuum')
-        x_max_plane = openmc.XPlane(x0=x_max, boundary_type='vacuum')
+        z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
+        z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
 
-        # 최외곽 닫힌 육각 기둥
-        final_region = -prism & +x_min_plane & -x_max_plane
+        final_region = -hex_prism & +z_min_plane & -z_max_plane
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
 
-        # auto_geom_ids를 활성화해야 OpenMC 기본 ID랑 충돌하지 않는 것 같음.
+        # auto_geom_ids를 활성화해야 OpenMC CSG ID랑 충돌하지 않는 것 같음.
         dag_universe = openmc.DAGMCUniverse(filename=h5m_path, auto_geom_ids=True)
 
         root_cell = openmc.Cell(
             name='root_cell',
             region=final_region,
-            fill=dag_universe
+            fill=dag_universe,
+            cell_id=999
         )
 
         # 최종 형상 조립
@@ -467,7 +467,7 @@ class NuclearFusion:
                 elif space_options["type"] == "Hexagonal Face":
                     source_positions = create_hexagonal_source_points(
                         n_points=sim_config['n_source_points'], # 충분한 수의 샘플 수 필요
-                        x_coord=space_options["x_coord"],
+                        z_coord=space_options["z_coord"],
                         pitch=space_options["pitch"],
                     )
                     custom_source.space = openmc.stats.PointCloud(source_positions)
@@ -584,18 +584,19 @@ class NuclearFusion:
 
             mesh_config = self.config['mesh']
 
-            mesh_x_min = self.tokamak_radius  # OB FW 위치부터
-            mesh_x_max = self.tokamak_radius + mesh_config['length_x'] # OB Pin 맨 끝까지
+            mesh_z_min = self.tokamak_radius  # OB FW 위치부터
+            mesh_z_max = self.tokamak_radius + mesh_config['length_z'] # OB Pin 맨 끝까지
 
             # 2D or 3D mesh 설정해야 함.
-            mesh_z_center = mesh_config['z_center']
-            mesh_z_thickness = mesh_config['z_thickness']
+            # 지금은 yz 평면의 pseudo-2D mesh
+            mesh_x_center = mesh_config['x_center']
+            mesh_x_thickness = mesh_config['x_thickness']
 
-            mesh_y_min = -mesh_config['length_y'] / 2.0  # 핀 반경보다 조금 더 크게
-            mesh_z_min = mesh_z_center - (mesh_z_thickness / 2.0)
+            mesh_x_min = mesh_x_center - (mesh_x_thickness / 2.0)
+            mesh_x_max = mesh_x_center + (mesh_x_thickness / 2.0)
 
+            mesh_y_min = -mesh_config['length_y'] / 2.0  # 육각형보다 조금 더 크게
             mesh_y_max = +mesh_config['length_y'] / 2.0
-            mesh_z_max = mesh_z_center + (mesh_z_thickness / 2.0)
 
             # 두 꼭짓점 사이만 격자를 생성
             mesh.lower_left = (mesh_x_min, mesh_y_min, mesh_z_min)  # lower_left 꼭짓점
@@ -702,29 +703,27 @@ class NuclearFusion:
                 self.materials['breeder_pebble_mix']: (255, 0, 0),  # 빨간색
                 self.materials['He_inner']: (0, 0, 255),  # 파란색
                 self.materials['He_outer']: (0, 0, 255),  # 파란색
-                self.materials['tungsten']: (128, 0, 128)  # 보라색
+                self.materials['tungsten']: (128, 0, 128),  # 보라색
             }
 
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (50.0, 20.0)
-            plot_xy.pixels = (1600, 800)
+            plot_xy.width = (20.0, 20.0)
+            plot_xy.pixels = (800, 800)
             plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
-            plot_xy.color_by = 'material'
-
-            # 재료별 색상 지정
-            plot_xy.colors = material_colors
+            plot_xy.color_by = 'cell'
 
             plot_yz = openmc.Plot()
             plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
-            plot_yz.width = (20.0, 20.0)
-            plot_yz.pixels = (800, 800)
+            plot_yz.width = (20.0, 60.0)
+            plot_yz.pixels = (800, 2400)
             plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
             plot_yz.basis = 'yz'
             plot_yz.color_by = 'material'
 
+            # 재료별 색상 지정
             plot_yz.colors = material_colors
 
             # 플롯 생성
@@ -735,8 +734,6 @@ class NuclearFusion:
             openmc.plot_geometry()
 
             print(f" -> Material-colored plots saved.\n")
-
-
 
         except Exception as e:
             print(f"\n\nError in generate_geometry_2d_plots method: {e}\n")
@@ -764,8 +761,6 @@ class NuclearFusion:
             plot_pos = plot_source_position(this=model, n_samples=n_samples)
             plot_pos.update_layout(
                 title='Source Particle Staring Position',
-                xaxis_title='X [cm]',
-                yaxis_title='Y [cm]',
                 autosize=True,
                 legend=dict(),
                 showlegend=True,
@@ -792,8 +787,6 @@ class NuclearFusion:
             plot_dir = plot_source_direction(this=model, n_samples=n_samples)
             plot_dir.update_layout(
                 title='Source Particle Moving Direction',
-                xaxis_title='X [cm]',
-                yaxis_title='Y [cm]',
                 autosize=True,
                 legend=dict(),
                 showlegend=True,
@@ -877,7 +870,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            openmc.run(tracks=False, threads=self.config['simulation']['threads'])
+            # openmc.run(tracks=False, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")
