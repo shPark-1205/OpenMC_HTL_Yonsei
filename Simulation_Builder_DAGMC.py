@@ -298,7 +298,7 @@ class NuclearFusion:
         # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
         hex_prism = openmc.model.HexagonalPrism(
-            edge_length=self.config['geometry']['pitch']-0.000001,
+            edge_length=(self.config['geometry']['pitch']*(2/3))-0.000001,
             origin=(0.0, 0.0),
             orientation='y',
             boundary_type='periodic'
