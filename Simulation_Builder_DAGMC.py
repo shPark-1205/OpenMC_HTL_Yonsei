@@ -300,7 +300,7 @@ class NuclearFusion:
         hex_prism = openmc.model.HexagonalPrism(
             edge_length=(self.config['geometry']['pitch']*(2/3))-0.000001,
             origin=(0.0, 0.0),
-            orientation='y',
+            orientation='x',
             boundary_type='periodic'
         )
 
