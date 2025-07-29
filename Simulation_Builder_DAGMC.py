@@ -569,7 +569,7 @@ class NuclearFusion:
 
             tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=999)
             tally_breeder_flux.scores = ['flux']
-            tally_breeder_flux.filters = [breeder_filter, openmc.ParticleFilter(['neutron'])]
+            tally_breeder_flux.filters = [breeder_filter, energy_filter, openmc.ParticleFilter(['neutron'])]
             self.tallies.append(tally_breeder_flux)
 
             '''여기부터는 local Tally'''
@@ -625,7 +625,7 @@ class NuclearFusion:
 
             tally_local_flux = openmc.Tally(name='local_flux', tally_id=41)
             tally_local_flux.scores = ['flux']
-            tally_local_flux.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_flux.filters = [mesh_filter, solid_material_filter, energy_filter,openmc.ParticleFilter(['neutron'])]
 
             # tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
             # tally_local_tbr.scores = ['H3-production']
