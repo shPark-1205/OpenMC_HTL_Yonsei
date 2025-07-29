@@ -149,7 +149,7 @@ class SourceSelectionWindow:
         self.point_z = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius'])
 
         # Hexagonal 소스 위치 제안
-        self.hex_x_coord_var = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius']) # Major radius 값
+        self.hex_z_coord_var = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius']) # Major radius 값
         self.hex_pitch_var = tk.DoubleVar(value=self.config['geometry']['pitch']) # Pitch 값 (실제 핀 사이의 거리 아님!!!!!!)
 
         self.space_choice = tk.StringVar(value="Point")
@@ -254,7 +254,7 @@ class SourceSelectionWindow:
         hex_frame.grid(row=1, column=0)
 
         tk.Label(hex_frame, text="Z-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
-        tk.Entry(hex_frame, textvariable=self.hex_x_coord_var, width=10).grid(row=0, column=1, padx=5)
+        tk.Entry(hex_frame, textvariable=self.hex_z_coord_var, width=10).grid(row=0, column=1, padx=5)
         tk.Label(hex_frame, text="Pitch (Better not to change):").grid(row=0, column=2, sticky='e')
         tk.Entry(hex_frame, textvariable=self.hex_pitch_var, width=10).grid(row=0, column=3, padx=5)
 
@@ -402,7 +402,7 @@ class SourceSelectionWindow:
         if space_type == "Point":
             space_options["coords"] = (self.point_x.get(), self.point_y.get(), self.point_z.get())
         elif space_type == "Hexagonal Face":
-            space_options["x_coord"] = self.hex_x_coord_var.get()
+            space_options["z_coord"] = self.hex_z_coord_var.get()
             space_options["pitch"] = self.hex_pitch_var.get()
 
         angle_type = self.angle_choice.get()
