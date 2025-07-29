@@ -295,10 +295,10 @@ class NuclearFusion:
         final_region을 본인 형상에 맞게 수정해야 함.
         """
         
-        # DAGMC 형상보다 약간 큰 region 생성
+        # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
         hex_prism = openmc.model.HexagonalPrism(
-            edge_length=self.config['geometry']['pitch']+0.00001,
+            edge_length=self.config['geometry']['pitch']-0.000001,
             origin=(0.0, 0.0),
             orientation='y',
             boundary_type='periodic'
@@ -576,8 +576,8 @@ class NuclearFusion:
 
             # Local Tally 계산을 위한 mesh 생성
             # RegularMesh : 직육면체 격자, CylindricalMesh : 원통형 격자, SphericalMesh : 구형 격자
-            # CylindricalMesh는 현재 z축만 회전축으로 지원하는데, openmc-plasma-source 모듈은 z축을 토카막의 축으로 지정
-            # -> 그래서 CylindricalMesh는 의미가 없을 듯
+            # CylindricalMesh는 현재 z축만 회전 축으로 지원
+            # 3D mesh로 데이터를 뽑고 싶으면 CylindricalMesh 사용하면 될 듯
             
             # OpenMC의 정렬격자 사용
             mesh = openmc.RegularMesh(name='focused_mesh')
