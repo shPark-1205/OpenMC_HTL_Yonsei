@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import font
 import sys
 import numpy as np
+import yaml
 
 # 데스크탑에 진행 화면 표시하는 코드
 class StatusWindow:
@@ -125,6 +126,11 @@ class StatusWindow:
 class SourceSelectionWindow:
 
     def __init__(self, title="Defining Plasma Source"):
+        with open('config_DAGMC.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+
+        self.config = config
+
         self.window = tk.Tk()
         self.window.title(title)
         self.window.geometry("800x900")
@@ -138,13 +144,13 @@ class SourceSelectionWindow:
         self.formula_font = font.Font(family="Courier New", size=11, slant="italic")
 
         # 기본 플라즈마 point 소스 위치 제안
-        self.point_x = tk.DoubleVar(value=906.0)
+        self.point_x = tk.DoubleVar(value=0.0)
         self.point_y = tk.DoubleVar(value=0.0)
-        self.point_z = tk.DoubleVar(value=0.0)
+        self.point_z = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius'])
 
         # Hexagonal 소스 위치 제안
-        self.hex_x_coord_var = tk.DoubleVar(value=906.0) # Major radius 값
-        self.hex_pitch_var = tk.DoubleVar(value=6.25*np.sqrt(3)) # Pitch 값 (실제 핀 사이의 거리 아님!!!!!!)
+        self.hex_x_coord_var = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius']) # Major radius 값
+        self.hex_pitch_var = tk.DoubleVar(value=self.config['geometry']['pitch']) # Pitch 값 (실제 핀 사이의 거리 아님!!!!!!)
 
         self.space_choice = tk.StringVar(value="Point")
         self.energy_choice = tk.StringVar(value="Discrete")
@@ -247,7 +253,7 @@ class SourceSelectionWindow:
         self.space_params_frames["Hexagonal Face"] = hex_frame
         hex_frame.grid(row=1, column=0)
 
-        tk.Label(hex_frame, text="X-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
+        tk.Label(hex_frame, text="Z-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
         tk.Entry(hex_frame, textvariable=self.hex_x_coord_var, width=10).grid(row=0, column=1, padx=5)
         tk.Label(hex_frame, text="Pitch (Better not to change):").grid(row=0, column=2, sticky='e')
         tk.Entry(hex_frame, textvariable=self.hex_pitch_var, width=10).grid(row=0, column=3, padx=5)
@@ -273,9 +279,9 @@ class SourceSelectionWindow:
         self.mono_frame = tk.Frame(angle_main_frame)
         self.mono_frame.pack(pady=5)
 
-        self.mono_u = tk.DoubleVar(value=1.0)
+        self.mono_u = tk.DoubleVar(value=0.0)
         self.mono_v = tk.DoubleVar(value=0.0)
-        self.mono_w = tk.DoubleVar(value=0.0)
+        self.mono_w = tk.DoubleVar(value=1.0)
 
         tk.Label(self.mono_frame, text="u:").pack(side='left')
         tk.Entry(self.mono_frame, textvariable=self.mono_u, width=5).pack(side='left')
