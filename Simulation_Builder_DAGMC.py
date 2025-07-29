@@ -32,9 +32,9 @@ def create_hexagonal_source_points(n_points, z_coord, pitch):
         x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(y) <= s) and \
-                    (abs(np.sqrt(3.0) * y + x) <= s * np.sqrt(3)) and \
-                    (abs(-np.sqrt(3.0) * y + x) <= s * np.sqrt(3))
+        is_inside = (abs(x) <= s) and \
+                    (abs(np.sqrt(3.0) * x + y) <= s * np.sqrt(3)) and \
+                    (abs(-np.sqrt(3.0) * x + y) <= s * np.sqrt(3))
 
         if is_inside:
             points.append((x, y, z))
