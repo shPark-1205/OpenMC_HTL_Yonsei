@@ -21,8 +21,8 @@ def create_hexagonal_source_points(n_points, z_coord, pitch):
 
     # 육각형을 포함하는 가장 작은 사각형 생성
     z = z_coord
-    abs_x_max = s * (np.sqrt(3.0) / 2.0)
-    abs_y_max = s
+    abs_x_max = s
+    abs_y_max = s * (np.sqrt(3.0) / 2.0)
 
     print(f"\nGenerating {n_points} source points on a hexagonal face at x={z_coord}...")
 
