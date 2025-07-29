@@ -709,7 +709,7 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (20.0, 20.0)
+            plot_xy.width = (26.0, 26.0)
             plot_xy.pixels = (800, 800)
             plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
@@ -717,14 +717,22 @@ class NuclearFusion:
 
             plot_yz = openmc.Plot()
             plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
-            plot_yz.width = (20.0, 60.0)
-            plot_yz.pixels = (800, 2400)
+            plot_yz.width = (30.0, 60.0)
+            plot_yz.pixels = (1600, 2400)
             plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
             plot_yz.basis = 'yz'
             plot_yz.color_by = 'material'
 
+            plot_zx = openmc.Plot()
+            plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
+            plot_zx.width = (30.0, 60.0)
+            plot_zx.pixels = (1600, 2400)
+            plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
+            plot_zx.basis = 'zx'
+            plot_zx.color_by = 'material'
+
             # 재료별 색상 지정
-            plot_yz.colors = material_colors
+            plot_yz.colors, plot_zx.colors = material_colors
 
             # 플롯 생성
             plots = openmc.Plots([plot_xy, plot_yz])
@@ -870,7 +878,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            openmc.run(tracks=False, threads=self.config['simulation']['threads'])
+            # openmc.run(tracks=False, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")
