@@ -12,12 +12,13 @@ from openmc_source_plotter import plot_source_energy, plot_source_position, plot
 from dagmc_geometry_slice_plotter import plot_axis_slice
 
 # Periodic 육각기둥 내부 단면에 무작위 위치의 중성자 소스 분포
-def create_hexagonal_source_points(n_points, z_coord, pitch):
+def create_hexagonal_source_points(n_points, z_coord, hex_edge_length):
 
     points =[]
 
     # 단위 육각형 한 변의 길이
-    s = pitch * (2.0 / 3.0)
+    # s = pitch * (2.0 / 3.0)
+    s = hex_edge_length
 
     # 육각형을 포함하는 가장 작은 사각형 생성
     z = z_coord
@@ -298,7 +299,7 @@ class NuclearFusion:
         # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
         hex_prism = openmc.model.HexagonalPrism(
-            edge_length=(self.config['geometry']['pitch']*(2/3))-0.000001,
+            edge_length=(self.config['geometry']['hex_edge_length'])-0.000001,
             origin=(0.0, 0.0),
             orientation='x',
             boundary_type='periodic'
@@ -468,7 +469,7 @@ class NuclearFusion:
                     source_positions = create_hexagonal_source_points(
                         n_points=sim_config['n_source_points'], # 충분한 수의 샘플 수 필요
                         z_coord=space_options["z_coord"],
-                        pitch=space_options["pitch"],
+                        hex_edge_length=space_options["hex_edge_length"],
                     )
                     custom_source.space = openmc.stats.PointCloud(source_positions)
 
