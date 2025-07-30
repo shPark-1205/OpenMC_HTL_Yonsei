@@ -573,7 +573,7 @@ class NuclearFusion:
             tally_multiplying.filters = [be12ti_outer_filter]
             self.tallies.append(tally_multiplying)
 
-            tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=999)
+            tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=97)
             tally_breeder_flux.scores = ['flux']
             tally_breeder_flux.filters = [breeder_filter, neutron_filter]
             self.tallies.append(tally_breeder_flux)
@@ -633,6 +633,10 @@ class NuclearFusion:
             tally_local_flux.scores = ['flux']
             tally_local_flux.filters = [mesh_filter, solid_material_filter, neutron_filter]
 
+            tally_eurofer_absorption = openmc.Tally(name='eurofer_absorption', tally_id=51)
+            tally_eurofer_absorption.scores = ['absorption']
+            tally_eurofer_absorption.filters = [mesh_filter, eurofer_filter, neutron_filter]
+
             # tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
             # tally_local_tbr.scores = ['H3-production']
             # tally_local_tbr.nuclides = ['Li6', 'Li7']
@@ -651,6 +655,7 @@ class NuclearFusion:
                 tally_local_heating_eurofer,
                 tally_local_heating_Be12Ti,
                 tally_local_flux,
+                tally_eurofer_absorption,
             ]
 
             # # Tally를 mesh 하나의 부피로 나눌 것인가?
