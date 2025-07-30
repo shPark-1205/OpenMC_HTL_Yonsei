@@ -11,7 +11,7 @@ from openmc_plasma_source import tokamak_source, fusion_ring_source, fusion_poin
 from openmc_source_plotter import plot_source_energy, plot_source_position, plot_source_direction
 from dagmc_geometry_slice_plotter import plot_axis_slice
 
-# Periodic 육각기둥 내부 단면에 무작위 위치의 중성자 소스 분포
+# 1/6 unit cell 내부 단면에 무작위 위치의 중성자 소스 분포
 def create_hexagonal_source_points(n_points, z_coord, hex_edge_length):
 
     points =[]
@@ -22,20 +22,19 @@ def create_hexagonal_source_points(n_points, z_coord, hex_edge_length):
 
     # 육각형을 포함하는 가장 작은 사각형 생성
     z = z_coord
-    abs_x_max = s
-    abs_y_max = s * (np.sqrt(3.0) / 2.0)
+    abs_x_max = s * (np.sqrt(3.0) / 2.0)
+    abs_y_max = s / 2.0
 
     print(f"\nGenerating {n_points} source points on a hexagonal face at x={z_coord}...")
 
     while len(points) < n_points:
 
         # 사각형 안에서 무작위 샘플링
-        x = np.random.uniform(-abs_x_max, abs_x_max)
+        x = np.random.uniform(0, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(x) <= s) and \
-                    (abs(np.sqrt(3.0) * x + y) <= s * np.sqrt(3)) and \
-                    (abs(-np.sqrt(3.0) * x + y) <= s * np.sqrt(3))
+        is_inside = (abs(np.sqrt(3.0) * x + y) >= 0) and \
+                    (abs(-np.sqrt(3.0) * x + y) >= 0)
 
         if is_inside:
             points.append((x, y, z))
@@ -298,17 +297,41 @@ class NuclearFusion:
         
         # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
-        hex_prism = openmc.model.HexagonalPrism(
-            edge_length=(self.config['geometry']['hex_edge_length'])-0.000001,
-            origin=(0.0, 0.0),
-            orientation='x',
-            boundary_type='periodic'
+        # hex_prism = openmc.model.HexagonalPrism(
+        #     edge_length=(self.config['geometry']['hex_edge_length'])-0.000001,
+        #     origin=(0.0, 0.0),
+        #     orientation='x',
+        #     boundary_type='periodic'
+        # )
+
+        # 1/6 최소 unit cell을 감싸는 삼각기둥 생성
+        triangle_1_plane = openmc.Plane(
+            a=1.0/np.sqrt(3),
+            b=-1.0,
+            c=0.0,
+            d=0.0,
+            name='triangle_1_plane',
+            boundary_type='reflective'
         )
 
+        triangle_2_plane = openmc.Plane(
+            a=1.0 / np.sqrt(3),
+            b=1.0,
+            c=0.0,
+            d=0.0,
+            name='triangle_2_plane',
+            boundary_type='reflective'
+        )
+
+        triangle_3_plane = openmc.XPlane(
+            x0=self.config['geometry']['hex_edge_length'] *(np.sqrt(3)/2.0),
+            name='triangle_3_plane',
+            boundary_type='reflective'
+        )
         z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
         z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
 
-        final_region = -hex_prism & +z_min_plane & -z_max_plane
+        final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
@@ -595,14 +618,14 @@ class NuclearFusion:
 
             # 2D or 3D mesh 설정해야 함.
             # 지금은 yz 평면의 pseudo-2D mesh
-            mesh_x_center = mesh_config['x_center']
-            mesh_x_thickness = mesh_config['x_thickness']
+            mesh_y_center = mesh_config['y_center']
+            mesh_y_thickness = mesh_config['y_thickness']
 
-            mesh_x_min = mesh_x_center - (mesh_x_thickness / 2.0)
-            mesh_x_max = mesh_x_center + (mesh_x_thickness / 2.0)
+            mesh_y_min = mesh_y_center - (mesh_y_thickness / 2.0)
+            mesh_y_max = mesh_y_center + (mesh_y_thickness / 2.0)
 
-            mesh_y_min = -mesh_config['length_y'] / 2.0  # 육각형보다 조금 더 크게
-            mesh_y_max = +mesh_config['length_y'] / 2.0
+            mesh_x_min = 0.0
+            mesh_x_max = mesh_config['length_x']
 
             # 두 꼭짓점 사이만 격자를 생성
             mesh.lower_left = (mesh_x_min, mesh_y_min, mesh_z_min)  # lower_left 꼭짓점
@@ -720,32 +743,32 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (26.0, 26.0)
+            plot_xy.width = (10.0, 10.0)
             plot_xy.pixels = (800, 800)
-            plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            plot_xy.origin = (self.config['geometry']['hex_edge_length']/np.sqrt(3), self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
             plot_xy.color_by = 'cell'
 
-            plot_yz = openmc.Plot()
-            plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
-            plot_yz.width = (30.0, 60.0)
-            plot_yz.pixels = (1200, 2400)
-            plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
-            plot_yz.basis = 'yz'
-            plot_yz.color_by = 'material'
-            plot_yz.colors = material_colors
+            # plot_yz = openmc.Plot()
+            # plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
+            # plot_yz.width = (30.0, 60.0)
+            # plot_yz.pixels = (1200, 2400)
+            # plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            # plot_yz.basis = 'yz'
+            # plot_yz.color_by = 'material'
+            # plot_yz.colors = material_colors
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
-            plot_zx.width = (30.0, 60.0)
-            plot_zx.pixels = (1200, 2400)
-            plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            plot_zx.width = (10.0, 60.0)
+            plot_zx.pixels = (800, 2400)
+            plot_zx.origin = (self.config['geometry']['hex_edge_length']/np.sqrt(3), self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_zx.basis = 'xz'
             plot_zx.color_by = 'material'
             plot_zx.colors = material_colors
 
             # 플롯 생성
-            plots = openmc.Plots([plot_xy, plot_yz, plot_zx])
+            plots = openmc.Plots([plot_xy, plot_zx])
             plots.export_to_xml()  # plots.xml 생성
 
             # geometry.xml과 materials.xml이 이미 생성된 상태여야 함
