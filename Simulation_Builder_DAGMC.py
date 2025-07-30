@@ -12,13 +12,13 @@ from openmc_source_plotter import plot_source_energy, plot_source_position, plot
 from dagmc_geometry_slice_plotter import plot_axis_slice
 
 # 1/6 unit cell 내부 단면에 무작위 위치의 중성자 소스 분포
-def create_hexagonal_source_points(n_points, z_coord, hex_edge_length):
+def create_hexagonal_source_points(n_points, z_coord, characteristic_length):
 
-    points =[]
+    points = []
 
     # 단위 육각형 한 변의 길이
     # s = pitch * (2.0 / 3.0)
-    s = hex_edge_length
+    s = characteristic_length
 
     # 육각형을 포함하는 가장 작은 사각형 생성
     z = z_coord
@@ -324,7 +324,7 @@ class NuclearFusion:
         )
 
         triangle_3_plane = openmc.XPlane(
-            x0=self.config['geometry']['hex_edge_length'] *(np.sqrt(3)/2.0),
+            x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
             name='triangle_3_plane',
             boundary_type='reflective'
         )
@@ -492,7 +492,7 @@ class NuclearFusion:
                     source_positions = create_hexagonal_source_points(
                         n_points=sim_config['n_source_points'], # 충분한 수의 샘플 수 필요
                         z_coord=space_options["z_coord"],
-                        hex_edge_length=space_options["hex_edge_length"],
+                        characteristic_length=space_options["characteristic_length"],
                     )
                     custom_source.space = openmc.stats.PointCloud(source_positions)
 
@@ -743,11 +743,12 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (15.0, 10.0)
-            plot_xy.pixels = (1200, 800)
-            plot_xy.origin = (self.config['geometry']['hex_edge_length']/np.sqrt(3), self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            plot_xy.width = (8.0, 8.0)
+            plot_xy.pixels = (800, 800)
+            plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
-            plot_xy.color_by = 'cell'
+            plot_xy.color_by = 'material'
+            plot_xy.colors = material_colors
 
             # plot_yz = openmc.Plot()
             # plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
@@ -760,9 +761,9 @@ class NuclearFusion:
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
-            plot_zx.width = (10.0, 60.0)
+            plot_zx.width = (8.0, 60.0)
             plot_zx.pixels = (800, 2400)
-            plot_zx.origin = (self.config['geometry']['hex_edge_length']/np.sqrt(3), self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_zx.basis = 'xz'
             plot_zx.color_by = 'material'
             plot_zx.colors = material_colors

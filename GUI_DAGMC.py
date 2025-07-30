@@ -150,7 +150,7 @@ class SourceSelectionWindow:
 
         # Hexagonal 소스 위치 제안
         self.hex_z_coord_var = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius']) # Major radius 값
-        self.hex_edge_var = tk.DoubleVar(value=self.config['geometry']['hex_edge_length']) # 육각형 한 변 길이
+        self.characteristic_length_var = tk.DoubleVar(value=self.config['geometry']['characteristic_length']) # 육각형 한 변 길이
 
         self.space_choice = tk.StringVar(value="Point")
         self.energy_choice = tk.StringVar(value="Discrete")
@@ -256,7 +256,7 @@ class SourceSelectionWindow:
         tk.Label(hex_frame, text="Z-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
         tk.Entry(hex_frame, textvariable=self.hex_z_coord_var, width=10).grid(row=0, column=1, padx=5)
         tk.Label(hex_frame, text="Hex. edge length (Better not to change):").grid(row=0, column=2, sticky='e')
-        tk.Entry(hex_frame, textvariable=self.hex_edge_var, width=10).grid(row=0, column=3, padx=5)
+        tk.Entry(hex_frame, textvariable=self.characteristic_length_var, width=10).grid(row=0, column=3, padx=5)
 
         # 사용자에게 플라즈마 소스 각도 입력 받기
         angle_main_frame = tk.LabelFrame(self.custom_frame, text="Source direction", font=self.label_font, padx=10, pady=10)
@@ -403,7 +403,7 @@ class SourceSelectionWindow:
             space_options["coords"] = (self.point_x.get(), self.point_y.get(), self.point_z.get())
         elif space_type == "Hexagonal Face":
             space_options["z_coord"] = self.hex_z_coord_var.get()
-            space_options["hex_edge_length"] = self.hex_edge_var.get()
+            space_options["characteristic_length"] = self.characteristic_length_var.get()
 
         angle_type = self.angle_choice.get()
         angle_options = {"type": angle_type}

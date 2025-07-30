@@ -3,8 +3,8 @@
 
 # 해석 설정
 simulation:
-  particles: 10000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
-  batches: 10 # 해석의 iteration
+  particles: 100000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  batches: 50 # 해석의 iteration
   inactive: 0
   n_source_points: 10000
   threads: 20 # 컴퓨터 코어 수 (미설정시 최대 코어로 자동 설정)
@@ -26,8 +26,8 @@ materials:
 geometry:
   tokamak_major_radius: 906.0
   tokamak_minor_radius: 292.258
-#  pitch: 18.75 # 육각형 격자 pitch (실제 핀-핀 사이 거리 아닌 것에 주의!)
-  hex_edge_length: 6.25 # Unit cell 육각형 한 변 길이
+  # Edge length of triagle or hexagon depending on your geometry unit cell
+  characteristic_length: 7.2168783648703220563643597562745
   h5m_path: '/opt/geometries/20250729_EU_DEMO_HCPB_LP_UNIT_CELL_ZAxis_widehexagon.h5m'
 
 
@@ -41,7 +41,7 @@ bounding:
 
 # 형상 2D plot용 좌표
 2D_plot:
-  x_coord: 0.0
+  x_coord: 3.125
   y_coord: 0.0
   z_coord: 1221.0
 
