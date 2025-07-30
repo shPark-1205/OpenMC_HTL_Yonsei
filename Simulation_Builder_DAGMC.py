@@ -546,7 +546,12 @@ class NuclearFusion:
 
             # 에너지 filter
             energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
-            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=41)
+            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=51)
+
+            # Particle filter
+            neutron_filter = openmc.ParticleFilter(['neutron'], filter_id=61)
+            photon_filter = openmc.ParticleFilter(['photon'], filter_id=62)
+            particle_filter = openmc.ParticleFilter(['neutron', 'photon'], filter_id=63)
 
 
             '''여기부터는 평균 Tally'''
@@ -570,7 +575,7 @@ class NuclearFusion:
 
             tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=999)
             tally_breeder_flux.scores = ['flux']
-            tally_breeder_flux.filters = [breeder_filter, openmc.ParticleFilter(['neutron'])]
+            tally_breeder_flux.filters = [breeder_filter, neutron_filter]
             self.tallies.append(tally_breeder_flux)
 
             '''여기부터는 local Tally'''
@@ -614,19 +619,19 @@ class NuclearFusion:
 
             tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=11)
             tally_local_heating_breeder.scores = ['heating']
-            tally_local_heating_breeder.filters = [mesh_filter, breeder_filter, openmc.ParticleFilter(['neutron', 'photon'])]
+            tally_local_heating_breeder.filters = [mesh_filter, breeder_filter, particle_filter]
 
             tally_local_heating_eurofer = openmc.Tally(name='local_heating_eurofer', tally_id=12)
             tally_local_heating_eurofer.scores = ['heating']
-            tally_local_heating_eurofer.filters = [mesh_filter, eurofer_filter, openmc.ParticleFilter(['neutron', 'photon'])]
+            tally_local_heating_eurofer.filters = [mesh_filter, eurofer_filter, particle_filter]
 
             tally_local_heating_Be12Ti = openmc.Tally(name='local_heating_Be12Ti', tally_id=13)
             tally_local_heating_Be12Ti.scores = ['heating']
-            tally_local_heating_Be12Ti.filters = [mesh_filter, be12ti_outer_filter, openmc.ParticleFilter(['neutron', 'photon'])]
+            tally_local_heating_Be12Ti.filters = [mesh_filter, be12ti_outer_filter, particle_filter]
 
             tally_local_flux = openmc.Tally(name='local_flux', tally_id=41)
             tally_local_flux.scores = ['flux']
-            tally_local_flux.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron'])]
+            tally_local_flux.filters = [mesh_filter, solid_material_filter, neutron_filter]
 
             # tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
             # tally_local_tbr.scores = ['H3-production']
@@ -712,15 +717,15 @@ class NuclearFusion:
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
             plot_xy.width = (26.0, 26.0)
             plot_xy.pixels = (800, 800)
-            plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
+            plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
             plot_xy.color_by = 'cell'
 
             plot_yz = openmc.Plot()
             plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
             plot_yz.width = (30.0, 60.0)
-            plot_yz.pixels = (800, 2400)
-            plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
+            plot_yz.pixels = (1200, 2400)
+            plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_yz.basis = 'yz'
             plot_yz.color_by = 'material'
             plot_yz.colors = material_colors
@@ -728,8 +733,8 @@ class NuclearFusion:
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
             plot_zx.width = (30.0, 60.0)
-            plot_zx.pixels = (800, 2400)
-            plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'],self.config['2D_plot']['z_coord'])
+            plot_zx.pixels = (1200, 2400)
+            plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_zx.basis = 'xz'
             plot_zx.color_by = 'material'
             plot_zx.colors = material_colors
