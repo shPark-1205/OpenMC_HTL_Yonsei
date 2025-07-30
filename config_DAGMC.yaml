@@ -3,7 +3,7 @@
 
 # 해석 설정
 simulation:
-  particles: 20000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  particles: 10000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
   batches: 10 # 해석의 iteration
   inactive: 0
   n_source_points: 10000
@@ -27,7 +27,7 @@ geometry:
   tokamak_major_radius: 906.0
   tokamak_minor_radius: 292.258
 #  pitch: 18.75 # 육각형 격자 pitch (실제 핀-핀 사이 거리 아닌 것에 주의!)
-  hex_edge_length: 12.5 # Unit cell 육각형 한 변 길이
+  hex_edge_length: 6.25 # Unit cell 육각형 한 변 길이
   h5m_path: '/opt/geometries/20250729_EU_DEMO_HCPB_LP_UNIT_CELL_ZAxis_widehexagon.h5m'
 
 
@@ -48,11 +48,11 @@ bounding:
 
 # 후처리용 격자 설정 [cm or 개]
 mesh:
-  length_y: 14.5 # y 방향 길이 (160 mm)
+  length_x: 5.4 # y 방향 길이 (160 mm)
   length_z: 46.2 # First wall부터의 z 방향 길이 (462 mm)
-  x_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  x_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 1 # z 방향 격자 개수
-  division_y: 145 # y 방향 격자 개수
-  division_z: 462 # x 방향 격자 개수
+  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
+  y_thickness: 0.01 # 2D mesh인 경우 z 축 방향 격자 두께
+  division_x: 540 # z 방향 격자 개수
+  division_y: 1 # y 방향 격자 개수
+  division_z: 4620 # x 방향 격자 개수
 
