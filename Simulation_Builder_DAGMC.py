@@ -25,7 +25,7 @@ def create_hexagonal_source_points(n_points, z_coord, hex_edge_length):
     abs_x_max = s * (np.sqrt(3.0) / 2.0)
     abs_y_max = s / 2.0
 
-    print(f"\nGenerating {n_points} source points on a hexagonal face at x={z_coord}...")
+    print(f"\nGenerating {n_points} source points on a unit cross-section at z={z_coord}...")
 
     while len(points) < n_points:
 
@@ -39,7 +39,7 @@ def create_hexagonal_source_points(n_points, z_coord, hex_edge_length):
         if is_inside:
             points.append((x, y, z))
 
-    print(f"\nGenerated {len(points)} points for hexagonal source.")
+    print(f"\nGenerated {len(points)} points for unit cross-section source.")
     return points
 
 
@@ -501,7 +501,7 @@ class NuclearFusion:
 
             self.settings.source = plasma_source
 
-            print(f"\n\nSource '{source_name}' assigned to settings.")
+            print(f"\nSource '{source_name}' assigned to settings.")
 
             # cross_section.xml에 유체의 모든 온도 데이터가 없으므로, 설정한 온도와 가장 가까운 곳의 온도 데이터 사용
             self.settings.temperature = {
@@ -726,7 +726,7 @@ class NuclearFusion:
             # print("YZ geometry plot with axes saved.\n")
 
 
-            print("Generating material-colored plot with openmc.plot_geometry...")
+            print("\nGenerating material-colored plot with openmc.plot_geometry...\n\n")
 
             material_colors = {
                 self.materials['eurofer_pressure_tube']: (128, 128, 128),  # 회색
@@ -743,8 +743,8 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (10.0, 10.0)
-            plot_xy.pixels = (800, 800)
+            plot_xy.width = (15.0, 10.0)
+            plot_xy.pixels = (1200, 800)
             plot_xy.origin = (self.config['geometry']['hex_edge_length']/np.sqrt(3), self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
             plot_xy.color_by = 'cell'
