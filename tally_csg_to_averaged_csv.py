@@ -124,11 +124,13 @@ class CSVPlotterApp:
             self.radial_axis_combo['values'] = columns
             self.value_combo['values'] = columns
             if len(columns) >= 3:
-                self.axial_axis_var.set(columns[2])
-                self.radial_axis_var.set(columns[1])
-                self.value_var.set(columns[0])
+                # Guesses the columns based on your description (A, B, C, D)
+                self.axial_axis_var.set(columns[1])  # B column (x-coord)
+                self.radial_axis_var.set(columns[2])  # C column (y-coord)
+                self.value_var.set(columns[0])  # A column (physical value)
         except Exception as e:
             messagebox.showerror("Error", f"Could not read columns from file:\n{e}")
+
 
     def _calculate_data(self, df):
         # 데이터 처리 로직을 별도 함수로 분리
@@ -202,12 +204,14 @@ class CSVPlotterApp:
         if not output_dir: return
 
         try:
+            # y축 이름
+            y_col_name = self.value_var.get()
             for file_path in self.csv_files:
                 df = pd.read_csv(file_path)
                 processed_data = self._calculate_data(df)
 
                 base_filename = os.path.splitext(os.path.basename(file_path))[0]
-                output_filename = os.path.join(output_dir, f"{base_filename}_{self.avg_type_var.get()}_avg.csv")
+                output_filename = os.path.join(output_dir, f"{base_filename}_{self.avg_type_var.get()}_avg_{y_col_name}.csv")
 
                 processed_data.to_frame(name=self.value_var.get()).to_csv(output_filename)
                 print(f"Data exported to {output_filename}")
@@ -222,24 +226,13 @@ class CSVPlotterApp:
             messagebox.showerror("Error", "Please select at least one CSV file.")
             return
 
-        avg_type = self.avg_type_var.get()
-        axial_col = self.axial_axis_var.get()
-        value_col = self.value_var.get()
-        radial_col = self.radial_axis_var.get()
+        # y축 이름
+        y_col_name = self.value_var.get()
 
-        # 내보낼 그래프의 x 축과 값을 선택하지 않으면
-        if not all([axial_col, value_col]) :
-            messagebox.showerror("Error", "Please select Axial and Value columns.")
-            return
-
-        # 면적 평균된 값을 내보낼 때 반경 방향 축 선택을 안하면
-        if avg_type == "Weighted" and not radial_col:
-            messagebox.showerror("Error", "Please select Radial Axis for weighted average.")
-            return
-
-        # csv 파일 이름 받기
+        suggested_filename = f"combined_{self.avg_type_var.get()}_avg_{y_col_name}.csv"
         output_path = filedialog.asksaveasfilename(
             title="Save Combined CSV File As...",
+            initialfile=suggested_filename,
             defaultextension=".csv",
             filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
         )
@@ -247,27 +240,17 @@ class CSVPlotterApp:
             return
 
         try:
-            # Series 형태로 여러 csv 파일의 DataFrame을 저장할 목록
             all_processed_data = []
-
             for file_path in self.csv_files:
                 df = pd.read_csv(file_path)
-
                 processed_data = self._calculate_data(df)
-
                 series_name = os.path.splitext(os.path.basename(file_path))[0]
                 processed_data.name = series_name
-
                 all_processed_data.append(processed_data)
 
-            # 변환한 DataFrame 여러 개를 하나의 pandas dataframe으로 변환
             final_df = pd.concat(all_processed_data, axis=1)
-
-            # CSV로 내보내기
             final_df.to_csv(output_path)
-
             messagebox.showinfo("Success", f"All data successfully combined and exported to:\n{output_path}")
-
         except Exception as e:
             messagebox.showerror("Export Error", f"An error occurred while exporting data:\n{e}")
 
