@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
+import numpy as np
 
 
 class CSVPlotterApp:
@@ -14,15 +15,17 @@ class CSVPlotterApp:
 
         # 데이터 저장을 위한 변수
         self.csv_files = []
-        self.x_axis_var = tk.StringVar()
-        self.y_axis_var = tk.StringVar()
+        self.axial_axis_var = tk.StringVar()
+        self.radial_axis_var = tk.StringVar()
+        self.value_var = tk.StringVar()
         self.multiplier_var = tk.DoubleVar(value=1.0)
+        self.avg_type_var = tk.StringVar(value="Arithmetic Mean") # 평균 방식 (선 vs 원) 선택 변수
 
         # 메인 프레임
         main_frame = ttk.Frame(root, padding="10")
         main_frame.pack(fill='both', expand=True)
 
-        # -컨트롤 프레임 (왼쪽)
+        # 컨트롤 프레임 (왼쪽)
         control_frame = ttk.Frame(main_frame, width=350)
         control_frame.pack(side='left', fill='y', padx=(0, 10))
 
@@ -35,19 +38,31 @@ class CSVPlotterApp:
         ttk.Button(file_frame, text="Browse...", command=self._select_files).pack(pady=5)
 
         # 축 선택 및 옵션 프레임
-        axis_frame = ttk.LabelFrame(control_frame, text="2. Select Columns & Options")
-        axis_frame.pack(fill='x', pady=10)
+        options_frame = ttk.LabelFrame(control_frame, text="2. Plotting Options")
+        options_frame.pack(fill='x', pady=10)
 
-        ttk.Label(axis_frame, text="X-Axis (Group By):").pack(anchor='w', padx=5, pady=(5, 0))
-        self.x_axis_combo = ttk.Combobox(axis_frame, textvariable=self.x_axis_var, state='readonly')
-        self.x_axis_combo.pack(fill='x', padx=5, pady=(0, 10))
+        # 평균 방식 선택 프레임
+        avg_type_frame = ttk.Frame(options_frame)
+        avg_type_frame.pack(fill='x', padx=5, pady=5)
+        ttk.Label(avg_type_frame, text="Averaging Method:").pack(side='left')
+        ttk.Radiobutton(avg_type_frame, text="Arithmetic Mean", variable=self.avg_type_var, value="Arithmetic",command=self._update_ui_for_avg_type).pack(side='left', padx=5)
+        ttk.Radiobutton(avg_type_frame, text="Area-Weighted Mean", variable=self.avg_type_var, value="Weighted",command=self._update_ui_for_avg_type).pack(side='left')
 
-        ttk.Label(axis_frame, text="Y-Axis (Average of):").pack(anchor='w', padx=5, pady=(5, 0))
-        self.y_axis_combo = ttk.Combobox(axis_frame, textvariable=self.y_axis_var, state='readonly')
-        self.y_axis_combo.pack(fill='x', padx=5, pady=(0, 10))
+        # 축 선택
+        ttk.Label(options_frame, text="Axial Axis (Group By):").pack(anchor='w', padx=5, pady=(5, 0))
+        self.axial_axis_combo = ttk.Combobox(options_frame, textvariable=self.axial_axis_var, state='readonly')
+        self.axial_axis_combo.pack(fill='x', padx=5, pady=(0, 10))
 
-        ttk.Label(axis_frame, text="Y-Axis Multiplier:").pack(anchor='w', padx=5, pady=(5, 0))
-        ttk.Entry(axis_frame, textvariable=self.multiplier_var, width=15).pack(fill='x', padx=5, pady=(0, 10))
+        # 반경 축 선택 위젯 (처음에는 안보임)
+        self.radial_axis_label = ttk.Label(options_frame, text="Radial Axis:")
+        self.radial_axis_combo = ttk.Combobox(options_frame, textvariable=self.radial_axis_var, state='readonly')
+
+        ttk.Label(options_frame, text="Value to Average:").pack(anchor='w', padx=5, pady=(5, 0))
+        self.value_combo = ttk.Combobox(options_frame, textvariable=self.value_var, state='readonly')
+        self.value_combo.pack(fill='x', padx=5, pady=(0, 10))
+
+        ttk.Label(options_frame, text="Value Multiplier:").pack(anchor='w', padx=5, pady=(5, 0))
+        ttk.Entry(options_frame, textvariable=self.multiplier_var, width=15).pack(fill='x', padx=5, pady=(0, 10))
 
         # 플롯 생성 버튼
         ttk.Button(control_frame, text="Generate Plot", command=self._plot_data).pack(pady=20, fill='x')
@@ -61,6 +76,15 @@ class CSVPlotterApp:
         self.plot_frame.pack(side='left', fill='both', expand=True)
 
         self.canvas = None  # Matplotlib 캔버스를 담을 변수
+
+    def _update_ui_for_avg_type(self):
+        # 평균 방식 선택에 따라 반경 축 위젯을 보이거나 숨김
+        if self.avg_type_var.get() == "Weighted":
+            self.radial_axis_label.pack(anchor='w', padx=5, pady=(5, 0))
+            self.radial_axis_combo.pack(fill='x', padx=5, pady=(0, 10))
+        else:
+            self.radial_axis_label.pack_forget()
+            self.radial_axis_combo.pack_forget()
 
     def _select_files(self):
         filepaths = filedialog.askopenfilenames(
@@ -81,28 +105,66 @@ class CSVPlotterApp:
         if not self.csv_files: return
         try:
             columns = pd.read_csv(self.csv_files[0], nrows=0).columns.tolist()
-            self.x_axis_combo['values'] = columns
-            self.y_axis_combo['values'] = columns
-            if columns:
-                self.x_axis_var.set(columns[0])
-                self.y_axis_var.set(columns[-1])
+            self.axial_axis_combo['values'] = columns
+            self.radial_axis_combo['values'] = columns
+            self.value_combo['values'] = columns
+            if len(columns) >= 3:
+                self.axial_axis_var.set(columns[2])
+                self.radial_axis_var.set(columns[1])
+                self.value_var.set(columns[0])
         except Exception as e:
             messagebox.showerror("Error", f"Could not read columns from file:\n{e}")
 
+
+    def _populate_radial_axis_selectors(self):
+        if not self.csv_files: return
+        try:
+            columns = pd.read_csv(self.csv_files[0], nrows=0).columns.tolist()
+            self.axial_axis_combo['values'] = columns
+            self.radial_axis_combo['values'] = columns
+            self.value_combo['values'] = columns
+            if len(columns) >= 3:
+                self.axial_axis_var.set(columns[2])
+                self.radial_axis_var.set(columns[1])
+                self.value_var.set(columns[0])
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not read columns from file:\n{e}")
+
+    def _calculate_data(self, df):
+        # 데이터 처리 로직을 별도 함수로 분리
+        avg_type = self.avg_type_var.get()
+        axial_col = self.axial_axis_var.get()
+        value_col = self.value_var.get()
+        multiplier = self.multiplier_var.get()
+
+        if avg_type == "Arithmetic":
+            # 산술 평균
+            avg_data = df.groupby(axial_col)[value_col].mean()
+        else:  # "Weighted"
+            radial_col = self.radial_axis_var.get()
+            if not radial_col:
+                raise ValueError("Radial Axis must be selected for weighted average.")
+
+            r_bins = np.sort(df[radial_col].unique())
+            if len(r_bins) < 2:
+                # 반경 데이터가 하나뿐이면 산술 평균으로 대체
+                avg_data = df.groupby(axial_col)[value_col].mean()
+            else:
+                # 격자의 반경 방향 간격이 모두 동일하다고 가정
+                dr = r_bins[1] - r_bins[0]
+                df['area'] = 2 * np.pi * df[radial_col] * dr
+                df['weighted_value'] = df[value_col] * df['area']
+
+                sum_of_weighted_values = df.groupby(axial_col)['weighted_value'].sum()
+                sum_of_weights = df.groupby(axial_col)['area'].sum()
+
+                avg_data = sum_of_weighted_values / sum_of_weights
+
+        return avg_data * multiplier
+
     def _plot_data(self):
         if not self.csv_files:
-            messagebox.showerror("Error", "Please select at least one CSV file.")
-            return
-        x_col = self.x_axis_var.get()
-        y_col = self.y_axis_var.get()
-        if not x_col or not y_col:
-            messagebox.showerror("Error", "Please select both X and Y axis columns.")
-            return
-
-        try:
-            multiplier = self.multiplier_var.get()
-        except (tk.TclError, ValueError):
-            messagebox.showerror("Input Error", "Multiplier must be a valid number.")
+            messagebox.showerror("Error", "Please select files.")
             return
 
         if self.canvas:
@@ -113,16 +175,14 @@ class CSVPlotterApp:
         try:
             for file_path in self.csv_files:
                 df = pd.read_csv(file_path)
-
-                avg_data = df.groupby(x_col)[y_col].mean()
-                scaled_avg_data = avg_data * multiplier
+                processed_data = self._calculate_data(df)
 
                 label = os.path.basename(file_path)
-                ax.plot(scaled_avg_data.index, scaled_avg_data.values, marker='.', linestyle='-', label=label)
+                ax.plot(processed_data.index, processed_data.values, marker='.', linestyle='-', label=label)
 
-            ax.set_xlabel(x_col)
-            ax.set_ylabel(f"Average of {y_col} (multiplied by {multiplier})")
-            ax.set_title(f"'{y_col}' averaged over other axes")
+            ax.set_xlabel(f"Axial Position ({self.axial_axis_var.get()})")
+            ax.set_ylabel(f"Average of {self.value_var.get()}")
+            ax.set_title("Axial Profile of Averaged Data")
             ax.legend()
             ax.grid(True)
 
@@ -134,43 +194,22 @@ class CSVPlotterApp:
             messagebox.showerror("Plotting Error", f"An error occurred while plotting:\n{e}")
 
     def _export_data(self):
-        # 입력값 유효성 검사
         if not self.csv_files:
-            messagebox.showerror("Error", "Please select at least one CSV file.")
-            return
-        x_col = self.x_axis_var.get()
-        y_col = self.y_axis_var.get()
-        if not x_col or not y_col:
-            messagebox.showerror("Error", "Please select both X and Y axis columns.")
+            messagebox.showerror("Error", "Please select files.")
             return
 
-        try:
-            multiplier = self.multiplier_var.get()
-        except (tk.TclError, ValueError):
-            messagebox.showerror("Input Error", "Multiplier must be a valid number.")
-            return
-
-        # 저장할 폴더를 사용자에게 선택받음
         output_dir = filedialog.askdirectory(title="Select a folder to save exported CSV files")
-        if not output_dir:  # 사용자가 '취소'를 누르면
-            return
+        if not output_dir: return
 
         try:
-            # 선택된 모든 파일에 대해 반복
             for file_path in self.csv_files:
                 df = pd.read_csv(file_path)
+                processed_data = self._calculate_data(df)
 
-                # 그룹화 및 평균 계산
-                avg_data = df.groupby(x_col)[y_col].mean()
-                scaled_avg_data = avg_data * multiplier
-
-                # 원본 파일 이름 기반으로 새로운 파일 이름 생성
                 base_filename = os.path.splitext(os.path.basename(file_path))[0]
-                output_filename = os.path.join(output_dir, f"{base_filename}_averaged.csv")
+                output_filename = os.path.join(output_dir, f"{base_filename}_{self.avg_type_var.get()}_avg.csv")
 
-                # 계산된 데이터를 새로운 CSV 파일로 저장
-                # to_frame()으로 Series를 DataFrame으로 변환 후 저장
-                scaled_avg_data.to_frame(name=y_col).to_csv(output_filename)
+                processed_data.to_frame(name=self.value_var.get()).to_csv(output_filename)
                 print(f"Data exported to {output_filename}")
 
             messagebox.showinfo("Success", f"Data successfully exported to:\n{output_dir}")
@@ -182,15 +221,20 @@ class CSVPlotterApp:
         if not self.csv_files:
             messagebox.showerror("Error", "Please select at least one CSV file.")
             return
-        x_col = self.x_axis_var.get()
-        y_col = self.y_axis_var.get()
-        if not x_col or not y_col:
-            messagebox.showerror("Error", "Please select both X and Y axis columns.")
+
+        avg_type = self.avg_type_var.get()
+        axial_col = self.axial_axis_var.get()
+        value_col = self.value_var.get()
+        radial_col = self.radial_axis_var.get()
+
+        # 내보낼 그래프의 x 축과 값을 선택하지 않으면
+        if not all([axial_col, value_col]) :
+            messagebox.showerror("Error", "Please select Axial and Value columns.")
             return
-        try:
-            multiplier = self.multiplier_var.get()
-        except (tk.TclError, ValueError):
-            messagebox.showerror("Input Error", "Multiplier must be a valid number.")
+
+        # 면적 평균된 값을 내보낼 때 반경 방향 축 선택을 안하면
+        if avg_type == "Weighted" and not radial_col:
+            messagebox.showerror("Error", "Please select Radial Axis for weighted average.")
             return
 
         # csv 파일 이름 받기
@@ -209,14 +253,12 @@ class CSVPlotterApp:
             for file_path in self.csv_files:
                 df = pd.read_csv(file_path)
 
-                # 평균값 계산
-                avg_data = df.groupby(x_col)[y_col].mean()
-                scaled_avg_data = avg_data * multiplier
+                processed_data = self._calculate_data(df)
 
                 series_name = os.path.splitext(os.path.basename(file_path))[0]
-                scaled_avg_data.name = series_name
+                processed_data.name = series_name
 
-                all_processed_data.append(scaled_avg_data)
+                all_processed_data.append(processed_data)
 
             # 변환한 DataFrame 여러 개를 하나의 pandas dataframe으로 변환
             final_df = pd.concat(all_processed_data, axis=1)
