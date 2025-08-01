@@ -64,8 +64,13 @@ def conversion_worker(args):
         output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}.vtk")
 
         # 사용한 mesh의 크기가 사용자마다 다를 수 있으니 vtk로 내보낼 때 tally를 격자 부피로 정규화
-        mesh.write_data_to_vtk(filename=output_filename, datasets={score_to_plot: full_mesh_data},
-                               volume_normalization=True)
+        mesh.write_data_to_vtk(filename=output_filename,
+                               datasets={
+                                   'mean' : full_mesh_data,
+                                   'std. dev.' : std_dev_data,
+                                   'relative error' : relative_error_data,
+                               },
+                               volume_normalization=False)
         return f"Saved {output_filename}"
     except Exception as e:
         return f"Failed to process {os.path.basename(sp_path)} Tally {tally_id}: {e}"
