@@ -53,7 +53,8 @@ class CSVPlotterApp:
         ttk.Button(control_frame, text="Generate Plot", command=self._plot_data).pack(pady=20, fill='x')
 
         # 파일 저장 버튼
-        ttk.Button(control_frame, text="Export Plotted Data to CSV...", command=self._export_data).pack(pady=10, fill='x')
+        ttk.Button(control_frame, text="Export Each to CSV...", command=self._export_data).pack(pady=10, fill='x')
+        ttk.Button(control_frame, text="Export All to Singe CSV...", command=self._export_all_to_single_csv).pack(pady=10, fill='x')
 
         # 플롯 프레임 (오른쪽)
         self.plot_frame = ttk.Frame(main_frame)
@@ -176,6 +177,58 @@ class CSVPlotterApp:
 
         except Exception as e:
             messagebox.showerror("Export Error", f"An error occurred while exporting data:\n{e}")
+
+    def _export_all_to_single_csv(self):
+        if not self.csv_files:
+            messagebox.showerror("Error", "Please select at least one CSV file.")
+            return
+        x_col = self.x_axis_var.get()
+        y_col = self.y_axis_var.get()
+        if not x_col or not y_col:
+            messagebox.showerror("Error", "Please select both X and Y axis columns.")
+            return
+        try:
+            multiplier = self.multiplier_var.get()
+        except (tk.TclError, ValueError):
+            messagebox.showerror("Input Error", "Multiplier must be a valid number.")
+            return
+
+        # csv 파일 이름 받기
+        output_path = filedialog.asksaveasfilename(
+            title="Save Combined CSV File As...",
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if not output_path:
+            return
+
+        try:
+            # Series 형태로 여러 csv 파일의 DataFrame을 저장할 목록
+            all_processed_data = []
+
+            for file_path in self.csv_files:
+                df = pd.read_csv(file_path)
+
+                # 평균값 계산
+                avg_data = df.groupby(x_col)[y_col].mean()
+                scaled_avg_data = avg_data * multiplier
+
+                series_name = os.path.splitext(os.path.basename(file_path))[0]
+                scaled_avg_data.name = series_name
+
+                all_processed_data.append(scaled_avg_data)
+
+            # 변환한 DataFrame 여러 개를 하나의 pandas dataframe으로 변환
+            final_df = pd.concat(all_processed_data, axis=1)
+
+            # CSV로 내보내기
+            final_df.to_csv(output_path)
+
+            messagebox.showinfo("Success", f"All data successfully combined and exported to:\n{output_path}")
+
+        except Exception as e:
+            messagebox.showerror("Export Error", f"An error occurred while exporting data:\n{e}")
+
 
 if __name__ == '__main__':
     root = tk.Tk()
