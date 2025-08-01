@@ -49,16 +49,28 @@ def conversion_worker(args):
         # Tally 저장에 사용한 mesh를 똑같이 생성하고 0으로 채우기
         full_mesh_data = np.zeros(mesh.dimension)
 
+        # 표준편차는 단순히 더하면 안되니까 분산을 구하고 제곱근
+        variance_sum_data = np.zeros(mesh.dimension)
+
         # x, y, z 좌표와 이 좌표에 해당하는 tally의 mean 값 대입
         for _, row in filtered_df.iterrows():
             x_key = ('mesh 1', 'x') if is_multi_index else 'x'
             y_key = ('mesh 1', 'y') if is_multi_index else 'y'
             z_key = ('mesh 1', 'z') if is_multi_index else 'z'
             mean_key = ('mean', '') if is_multi_index else 'mean'
+            std_dev_key = ('std. dev.', '') if is_multi_index else 'std. dev.'
             idx, idy, idz = int(row[x_key]) - 1, int(row[y_key]) - 1, int(row[z_key]) - 1
 
             # Particle이 neutron과 photon이 있으니 +=를 해서 덮어쓰기 방지
             full_mesh_data[idx, idy, idz] += row[mean_key]
+
+            # StdDev(A+B) != StdDev(A) + StdDev(B)
+            # 분산의 합을 구한 후 제곱근을 해야 함
+            variance_sum_data[idx, idy, idz] += row[std_dev_key]**2
+
+        # 분산 제곱근 = 표준편차
+        std_dev_data = np.sqrt(variance_sum_data)
+        relative_error_data = np.divide(std_dev_data, full_mesh_data, out=np.zeros_like(full_mesh_data), where=(full_mesh_data != 0))
 
         base_filename_no_ext = os.path.splitext(os.path.basename(sp_path))[0]
         output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}.vtk")
@@ -255,8 +267,7 @@ class PostproGUI:
             # 선택할 수 있는 filter는 mesh를 제외한 다른 filter
             if is_multi_index:
                 filter_cols = [col[0] for col in self.current_df.columns if
-                               col[0] not in ['nuclide', 'score', 'mean', 'std. dev.'] and not col[0].startswith(
-                                   'mesh')]
+                               col[0] not in ['nuclide', 'score', 'mean', 'std. dev.'] and not col[0].startswith('mesh')]
 
             # Mesh filter가 없는 global tally를 선택하면
             else:
@@ -317,8 +328,7 @@ class PostproGUI:
         for sp_path in self.statepoint_paths:
             for index in selected_indices:
                 tally_id_str = self.tally_listbox.get(index)
-                task_args = (sp_path, tally_id_str, output_dir, score_to_plot, self.active_filters, self.mat_id_to_name,
-                             self.is_multi_index_map)
+                task_args = (sp_path, tally_id_str, output_dir, score_to_plot, self.active_filters, self.mat_id_to_name, self.is_multi_index_map)
                 tasks.append(task_args)
 
         # 멀티 프로세서를 사용해서 여러 개의 h5 파일을 변환할 때 병렬적으로 수행
