@@ -262,7 +262,7 @@ class NuclearFusion:
             self.all_materials_collection.export_to_xml()
             print("materials.xml exported successfully.\n")
             # print("========================================================================\n")
-            time.sleep(1)
+            # time.sleep(1)
 
         except Exception as e:
             print(f"\n\nError in define_materials method: {e}\n")
@@ -527,7 +527,7 @@ class NuclearFusion:
             self.settings.export_to_xml()
             print("settings.xml exported successfully.\n")
             print("========================================================================\n")
-            time.sleep(1)
+            # time.sleep(1)
 
         except Exception as e:
             print(f"\n\nError in define_settings method: {e}\n")
@@ -605,7 +605,7 @@ class NuclearFusion:
             tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=97)
             tally_breeder_flux.scores = ['flux']
             tally_breeder_flux.filters = [breeder_filter, neutron_filter]
-            self.tallies.append(tally_breeder_flux)
+            # self.tallies.append(tally_breeder_flux)
 
             '''여기부터는 local Tally'''
 
@@ -613,7 +613,8 @@ class NuclearFusion:
             # RegularMesh : 직육면체 격자, CylindricalMesh : 원통형 격자, SphericalMesh : 구형 격자
             # CylindricalMesh는 현재 z축만 회전 축으로 지원
             # 3D mesh로 데이터를 뽑고 싶으면 CylindricalMesh 사용하면 될 듯
-            
+
+            """
             # OpenMC의 정렬격자 사용
             mesh = openmc.RegularMesh(name='focused_mesh')
 
@@ -641,6 +642,31 @@ class NuclearFusion:
             mesh.dimension = (mesh_config['division_x'], mesh_config['division_y'], mesh_config['division_z'])
 
             mesh_filter = openmc.MeshFilter(mesh, filter_id=99)
+            """
+
+            # Breeder만 감싸는 coarse mesh 생성
+            mesh_breeder = openmc.RegularMesh(name='breeder_coarse_mesh')
+
+            mesh_breeder_config = self.config['mesh_breeder']
+
+            mesh_breeder_z_min = mesh_breeder_config['z_min']
+            mesh_breeder_z_max = mesh_breeder_config['z_max']
+
+            mesh_breeder_y_center = mesh_breeder_config['y_center']
+            mesh_breeder_y_thickness = mesh_breeder_config['y_thickness']
+
+            mesh_breeder_y_min = mesh_breeder_y_center - (mesh_breeder_y_thickness / 2.0)
+            mesh_breeder_y_max = mesh_breeder_y_center + (mesh_breeder_y_thickness / 2.0)
+
+            mesh_breeder_x_min = mesh_breeder_config['x_min']
+            mesh_breeder_x_max = mesh_breeder_config['x_max']
+
+            mesh_breeder.lower_left = (mesh_breeder_x_min, mesh_breeder_y_min, mesh_breeder_z_min)
+            mesh_breeder.upper_right = (mesh_breeder_x_max, mesh_breeder_y_max, mesh_breeder_z_max)
+
+            mesh_breeder.dimension = (mesh_breeder_config['division_x'], mesh_breeder_config['division_y'], mesh_breeder_config['division_z'])
+
+            mesh_breeder_filter = openmc.MeshFilter(mesh_breeder, filter_id=101)
 
             # tally_flux_heating = openmc.Tally(name='flux_heating', tally_id=11)
             # tally_flux_heating.scores = ['flux', 'heating']
@@ -648,8 +674,9 @@ class NuclearFusion:
 
             tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=11)
             tally_local_heating_breeder.scores = ['heating']
-            tally_local_heating_breeder.filters = [mesh_filter, breeder_filter, particle_filter]
+            tally_local_heating_breeder.filters = [mesh_breeder_filter, breeder_filter, particle_filter]
 
+            """
             tally_local_heating_eurofer = openmc.Tally(name='local_heating_eurofer', tally_id=12)
             tally_local_heating_eurofer.scores = ['heating']
             tally_local_heating_eurofer.filters = [mesh_filter, eurofer_filter, particle_filter]
@@ -665,6 +692,7 @@ class NuclearFusion:
             tally_eurofer_absorption = openmc.Tally(name='eurofer_absorption', tally_id=51)
             tally_eurofer_absorption.scores = ['absorption']
             tally_eurofer_absorption.filters = [mesh_filter, eurofer_filter, neutron_filter]
+            """
 
             # tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
             # tally_local_tbr.scores = ['H3-production']
@@ -681,10 +709,10 @@ class NuclearFusion:
                 # tally_local_tbr,
                 # tally_local_multiplication,
                 tally_local_heating_breeder,
-                tally_local_heating_eurofer,
-                tally_local_heating_Be12Ti,
-                tally_local_flux,
-                tally_eurofer_absorption,
+                # tally_local_heating_eurofer,
+                # tally_local_heating_Be12Ti,
+                # tally_local_flux,
+                # tally_eurofer_absorption,
             ]
 
             # # Tally를 mesh 하나의 부피로 나눌 것인가?
@@ -699,7 +727,7 @@ class NuclearFusion:
             tallies_obj.export_to_xml()
             print("tallies.xml exported successfully.\n")
             print("========================================================================\n")
-            time.sleep(1)
+            # time.sleep(1)
 
         except Exception as e:
             print(f"\n\nError in define_tallies method: {e}\n")
@@ -892,13 +920,13 @@ class NuclearFusion:
 
                 pbar.set_description("\nGenerating Geometry Plots")
                 status_window.update_task_status("Geometry Plots", "Running...", "blue")
-                self.generate_geometry_2D_plots(plots_folder='plots')
+                # self.generate_geometry_2D_plots(plots_folder='plots')
                 status_window.update_task_status("Geometry Plots", "OK! ✓", "green")
                 pbar.update(1)
 
                 pbar.set_description("\nGenerating Source Previews")
                 status_window.update_task_status("Source Previews", "Running...", "blue")
-                self.preview_source_distribution(plots_folder='plots')
+                # self.preview_source_distribution(plots_folder='plots')
                 status_window.update_task_status("Source Previews", "OK! ✓", "green")
                 pbar.update(1)
 
@@ -918,7 +946,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            openmc.run(tracks=False, threads=self.config['simulation']['threads'])
+            openmc.run(tracks=True, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")
