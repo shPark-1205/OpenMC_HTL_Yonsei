@@ -378,8 +378,14 @@ class NuclearFusion:
             # 해석을 진행할 iteration 수와 비슷한 개념. Batch 수가 2배가 되면 해석 uncertainty는 sqrt(2)배 감소
             self.settings.batches = sim_config['batches']
 
-            # 작은 해석 : 50~100개, 큰 해석 : 수 백개 정도면 충분
+            # Fixed source 해석에서는 의미 없음.
             self.settings.inactive = sim_config['inactive']
+
+            # 중간 batch에서 해석 결과 저장
+            self.settings.statepoint = {'batches': range(5, sim_config['batches'] + 5, 5)}
+            
+            # Traks.h5 파일에 포함할 최대 particle 수
+            self.settings.max_tracks = 1000
 
             # FENDL library에는 동위원소에 대한 photon 데이터가 없으므로 비활성화
             if 'fendl' in self.cross_section_path.lower():
@@ -390,11 +396,11 @@ class NuclearFusion:
                 self.settings.photon_transport = True
 
             # Tracking할 particle 지정
-            self.settings.track = [
-                (20, 1, 1), # (Batch, Generation, Particle #)
-                (50, 1, 100),
-                (80, 1, 10000)
-            ]
+            # self.settings.track = [
+            #     (20, 1, 1), # (Batch, Generation, Particle #)
+            #     (50, 1, 100),
+            #     (80, 1, 10000)
+            # ]
 
             # 사용자 선택을 받기 위한 도구
             plasma_source = None
