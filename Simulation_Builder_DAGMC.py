@@ -385,7 +385,7 @@ class NuclearFusion:
             self.settings.statepoint = {'batches': range(5, sim_config['batches'] + 5, 5)}
             
             # Traks.h5 파일에 포함할 최대 particle 수
-            self.settings.max_tracks = 1000
+            self.settings.max_tracks = 100000
 
             # FENDL library에는 동위원소에 대한 photon 데이터가 없으므로 비활성화
             if 'fendl' in self.cross_section_path.lower():
