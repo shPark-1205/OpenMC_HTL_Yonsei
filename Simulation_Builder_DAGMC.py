@@ -604,8 +604,8 @@ class NuclearFusion:
 
             tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=97)
             tally_breeder_flux.scores = ['flux']
-            tally_breeder_flux.filters = [breeder_filter, neutron_filter]
-            # self.tallies.append(tally_breeder_flux)
+            tally_breeder_flux.filters = [breeder_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_breeder_flux)
 
             '''여기부터는 local Tally'''
 
