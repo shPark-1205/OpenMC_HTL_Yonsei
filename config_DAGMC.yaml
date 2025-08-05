@@ -7,6 +7,7 @@ simulation:
   batches: 50 # 해석의 iteration
   inactive: 0
   n_source_points: 10000
+  max_tracks: 10000
   threads: 20 # 컴퓨터 코어 수 (미설정시 최대 코어로 자동 설정)
 
 # 재료 설정
