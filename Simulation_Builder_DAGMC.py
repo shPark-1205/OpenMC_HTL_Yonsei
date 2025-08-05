@@ -11,7 +11,7 @@ from openmc_plasma_source import tokamak_source, fusion_ring_source, fusion_poin
 from openmc_source_plotter import plot_source_energy, plot_source_position, plot_source_direction
 from dagmc_geometry_slice_plotter import plot_axis_slice
 
-# 1/6 unit cell 내부 단면에 무작위 위치의 중성자 소스 분포
+# Unit cell 내부 단면에 무작위 위치의 중성자 소스 분포
 def create_hexagonal_source_points(n_points, z_coord, characteristic_length):
 
     points = []
@@ -23,18 +23,19 @@ def create_hexagonal_source_points(n_points, z_coord, characteristic_length):
     # 육각형을 포함하는 가장 작은 사각형 생성
     z = z_coord
     abs_x_max = s * (np.sqrt(3.0) / 2.0)
-    abs_y_max = s / 2.0
+    abs_y_max = s
 
     print(f"\nGenerating {n_points} source points on a unit cross-section at z={z_coord}...")
 
     while len(points) < n_points:
 
         # 사각형 안에서 무작위 샘플링
-        x = np.random.uniform(0, abs_x_max)
+        x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(np.sqrt(3.0) * x + y) >= 0) and \
-                    (abs(-np.sqrt(3.0) * x + y) >= 0)
+        is_inside = (abs(x) <= abs_x_max) and \
+                    (abs(np.sqrt(3.0) * x - y + s) >= 0) and \
+                    (abs(np.sqrt(3.0) * x + y + s) >= 0)
 
         if is_inside:
             points.append((x, y, z))
@@ -297,41 +298,43 @@ class NuclearFusion:
         
         # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
-        # hex_prism = openmc.model.HexagonalPrism(
-        #     edge_length=(self.config['geometry']['hex_edge_length'])-0.000001,
-        #     origin=(0.0, 0.0),
-        #     orientation='x',
-        #     boundary_type='periodic'
-        # )
+        hex_prism = openmc.model.HexagonalPrism(
+            edge_length=(self.config['geometry']['characteristic_length']),
+            origin=(0.0, 0.0),
+            orientation='y',
+            boundary_type='periodic'
+        )
 
         # 1/6 최소 unit cell을 감싸는 삼각기둥 생성
-        triangle_1_plane = openmc.Plane(
-            a=1.0/np.sqrt(3),
-            b=-1.0,
-            c=0.0,
-            d=0.0,
-            name='triangle_1_plane',
-            boundary_type='reflective'
-        )
-
-        triangle_2_plane = openmc.Plane(
-            a=1.0 / np.sqrt(3),
-            b=1.0,
-            c=0.0,
-            d=0.0,
-            name='triangle_2_plane',
-            boundary_type='reflective'
-        )
-
-        triangle_3_plane = openmc.XPlane(
-            x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
-            name='triangle_3_plane',
-            boundary_type='reflective'
-        )
+        # triangle_1_plane = openmc.Plane(
+        #     a=1.0/np.sqrt(3),
+        #     b=-1.0,
+        #     c=0.0,
+        #     d=0.0,
+        #     name='triangle_1_plane',
+        #     boundary_type='reflective'
+        # )
+        #
+        # triangle_2_plane = openmc.Plane(
+        #     a=1.0 / np.sqrt(3),
+        #     b=1.0,
+        #     c=0.0,
+        #     d=0.0,
+        #     name='triangle_2_plane',
+        #     boundary_type='reflective'
+        # )
+        #
+        # triangle_3_plane = openmc.XPlane(
+        #     x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
+        #     name='triangle_3_plane',
+        #     boundary_type='reflective'
+        # )
         z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
         z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
 
-        final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
+        # final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
+
+        final_region = -hex_prism & +z_min_plane & -z_max_plane
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
@@ -777,8 +780,8 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (8.0, 8.0)
-            plot_xy.pixels = (800, 800)
+            plot_xy.width = (20.0, 20.0)
+            plot_xy.pixels = (1000, 1000)
             plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
             plot_xy.color_by = 'material'
@@ -795,8 +798,8 @@ class NuclearFusion:
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
-            plot_zx.width = (8.0, 60.0)
-            plot_zx.pixels = (800, 2400)
+            plot_zx.width = (20.0, 60.0)
+            plot_zx.pixels = (1000, 3000)
             plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_zx.basis = 'xz'
             plot_zx.color_by = 'material'
@@ -920,13 +923,13 @@ class NuclearFusion:
 
                 pbar.set_description("\nGenerating Geometry Plots")
                 status_window.update_task_status("Geometry Plots", "Running...", "blue")
-                # self.generate_geometry_2D_plots(plots_folder='plots')
+                self.generate_geometry_2D_plots(plots_folder='plots')
                 status_window.update_task_status("Geometry Plots", "OK! ✓", "green")
                 pbar.update(1)
 
                 pbar.set_description("\nGenerating Source Previews")
                 status_window.update_task_status("Source Previews", "Running...", "blue")
-                # self.preview_source_distribution(plots_folder='plots')
+                self.preview_source_distribution(plots_folder='plots')
                 status_window.update_task_status("Source Previews", "OK! ✓", "green")
                 pbar.update(1)
 

@@ -3,8 +3,8 @@
 
 # 해석 설정
 simulation:
-  particles: 100000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
-  batches: 50 # 해석의 iteration
+  particles: 10000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  batches: 10 # 해석의 iteration
   inactive: 0
   n_source_points: 10000
   max_tracks: 10000
@@ -42,7 +42,7 @@ bounding:
 
 # 형상 2D plot용 좌표
 2D_plot:
-  x_coord: 3.125
+  x_coord: 0.0
   y_coord: 0.0
   z_coord: 1221.0
 
@@ -59,12 +59,12 @@ mesh:
 
 # Breeder만 감싸는 coarse mesh 설정
 mesh_breeder:
-  x_min: 1.4
+  x_min: -3.0
   x_max: 3.0
   z_min: 1202.158
   z_max: 1244.458
   y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
   y_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 16 # z 방향 격자 개수
+  division_x: 60 # z 방향 격자 개수
   division_y: 1 # y 방향 격자 개수
   division_z: 423 # x 방향 격자 개수
