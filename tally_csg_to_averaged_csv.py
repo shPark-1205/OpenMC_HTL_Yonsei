@@ -154,13 +154,13 @@ class CSVPlotterApp:
             else:
                 # 격자의 반경 방향 간격이 모두 동일하다고 가정
                 dr = r_bins[1] - r_bins[0]
-                df['area'] = 2 * np.pi * df[radial_col] * dr
+                df['area'] = 2 * np.pi * df[radial_col].abs() * dr
                 df['weighted_value'] = df[value_col] * df['area']
 
                 sum_of_weighted_values = df.groupby(axial_col)['weighted_value'].sum()
                 sum_of_weights = df.groupby(axial_col)['area'].sum()
 
-                avg_data = sum_of_weighted_values / sum_of_weights
+                avg_data = sum_of_weighted_values / sum_of_weights.replace(0, np.nan)
 
         return avg_data * multiplier
 
