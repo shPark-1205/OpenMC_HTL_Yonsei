@@ -219,7 +219,13 @@ class NuclearFusion:
             Be12Ti_inner_mat.temperature = 400
 
             # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
-            Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
+            # FENDL 라이브러리에는 thermal scattering data가 없기 때문에 예외 처리
+            if 'fendl' not in self.cross_section_path.lower():
+                print(" -> Adding thermal scattering data for Be12Ti...")
+                Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
+            else:
+                print(" -> FENDL library detected. Skipping thermal scattering data addition.")
+
             self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
             openmc_materials_list.append(Be12Ti_inner_mat)
 
