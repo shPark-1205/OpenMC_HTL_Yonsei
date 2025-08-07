@@ -130,6 +130,25 @@ OpenMC는 PyThon API와 C/C++ API를 지원함.
  ㅇ 해석을 즐기세요.
 	
 
+2. 위 방식은 너무 귀찮은 것 같고, 적당히 짧은 버전으로 하고 싶다!
+ ㅇ 필자에게 Dockerfile과 기타 설치에 필요한 폴더 요청
+
+ ㅇ 받은 폴더를 본인 편한 곳에 복사
+
+ ㅇ CMD를 활용해 OpenMC 설치
+    - CMD 실행
+    - cd 명령어를 활용해 복사한 폴더로 진입
+        ex) cd your_folder
+    - docker build -t openmc_YOURNAME_v#.# . 입력
+        ex) docker build -t openmc_psh_v1.1 .
+        - 맨 뒤에 . 붙이는 것 주의
+        - 이미지 빌드에 상당한 시간이 걸리니 대기
+    - docker images 입력
+        - 잘 설치되었으면 방금 빌드한 이미지 보임
+
+ ㅇ 위 PyThon 환경 구축부터 진행
+
+
 
 2. 모르겠고 필자가 다 해놓은 것을 달라!
  ㅇ 필자가 저장해놓은 Docker image 받아서 본인 Docker desktop에 load
