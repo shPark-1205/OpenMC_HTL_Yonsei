@@ -106,20 +106,28 @@ class NuclearFusion:
             nmm_materials_temp = {}
 
             self.material_configs = [
-                {'id': 100, 'name': 'eurofer', 'kwargs': {}},
+                {'id': 100, 'nmm_name': 'eurofer', 'output_name': 'eurofer_base', 'kwargs': {}},
 
                 # 유체는 온도/압력 정의 필수
-                {'id': 200, 'name': 'He', 'kwargs': {
+                {'id': 201, 'nmm_name': 'He', 'output_name': 'He_inner', 'kwargs': {
                     'temperature': self.config['materials']['he']['temperature'],
                     'pressure': self.config['materials']['he']['pressure']
                 }},
-                {'id': 301, 'name': 'tungsten', 'kwargs': {}},
+                {'id': 202, 'nmm_name': 'He', 'output_name': 'He_outer', 'kwargs': {
+                    'temperature': self.config['materials']['he']['temperature_purge'],
+                    'pressure': self.config['materials']['he']['pressure_purge']
+                }},
+                {'id': 203, 'nmm_name': 'He', 'output_name': 'He_channel', 'kwargs': {
+                    'temperature': self.config['materials']['he']['temperature'],
+                    'pressure': self.config['materials']['he']['pressure']
+                }},
+                {'id': 301, 'nmm_name': 'tungsten', 'output_name': 'tungsten','kwargs': {}},
 
                 # 증식재의 Li6 enrichment정의 가능
-                {'id': 402, 'name': 'Li4SiO4', 'kwargs': {
+                {'id': 402, 'nmm_name': 'Li4SiO4', 'output_name': 'Li4SiO4', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
                 }},
-                {'id': 403, 'name': 'Li2TiO3', 'kwargs': {
+                {'id': 403, 'nmm_name': 'Li2TiO3', 'output_name': 'Li2TiO3', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
                 }},
                 # {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
@@ -128,19 +136,19 @@ class NuclearFusion:
             # 임시 재료 목록 가져오기
             for mat_config in self.material_configs:
                 mat_id = mat_config['id']
-                mat_name = mat_config['name']
+                nmm_name = mat_config['nmm_name']
                 mat_kwargs = mat_config['kwargs']
 
-                print(f"\nLoading base material: {mat_name} with parameters {mat_kwargs}...")
+                print(f"\nLoading base material: {nmm_name} with parameters {mat_kwargs}...")
 
                 # nmm 모듈에서 재료 목록 불러오기
-                nmm_mat = nmm.Material.from_library(mat_name, **mat_kwargs)
+                nmm_mat = nmm.Material.from_library(nmm_name, **mat_kwargs)
                 
                 # nmm 물성을 openmc 물성으로 저장
                 openmc_mat = nmm_mat.openmc_material
 
-                if mat_name == 'eurofer':
-                    print(f"Cloning material: {mat_name} for different components...\n")
+                if nmm_name == 'eurofer':
+                    print(f"Cloning material: {nmm_name} for different components...\n")
 
                     # Pressure tube 용
                     eurofer_pressure_tube_mat = openmc_mat.clone()
@@ -166,24 +174,24 @@ class NuclearFusion:
                     openmc_materials_list.append(eurofer_first_wall_channel_mat)
                     print(f"  -> Created 'eurofer_first_wall_channel' (ID: {eurofer_first_wall_channel_mat.id})")
 
-                elif mat_name == 'He':
-                    print(f"Cloning material: {mat_name} for different components...\n")
-
-                    # Inner He 용
-                    he_inner_mat = openmc_mat.clone()
-                    he_inner_mat.id = 201
-                    he_inner_mat.name = 'He_inner'
-                    self.materials['He_inner'] = he_inner_mat
-                    openmc_materials_list.append(he_inner_mat)
-                    print(f"  -> Created 'He_inner' (ID: {he_inner_mat.id})")
-
-                    # Outer He 용
-                    he_outer_mat = openmc_mat.clone()
-                    he_outer_mat.id = 202
-                    he_outer_mat.name = 'He_outer'
-                    self.materials['He_outer'] = he_outer_mat
-                    openmc_materials_list.append(he_outer_mat)
-                    print(f"  -> Created 'He_outer' (ID: {he_outer_mat.id})")
+                # elif mat_name == 'He':
+                #     print(f"Cloning material: {mat_name} for different components...\n")
+                #
+                #     # Inner He 용
+                #     he_inner_mat = openmc_mat.clone()
+                #     he_inner_mat.id = 201
+                #     he_inner_mat.name = 'He_inner'
+                #     self.materials['He_inner'] = he_inner_mat
+                #     openmc_materials_list.append(he_inner_mat)
+                #     print(f"  -> Created 'He_inner' (ID: {he_inner_mat.id})")
+                #
+                #     # Outer He 용
+                #     he_outer_mat = openmc_mat.clone()
+                #     he_outer_mat.id = 202
+                #     he_outer_mat.name = 'He_outer'
+                #     self.materials['He_outer'] = he_outer_mat
+                #     openmc_materials_list.append(he_outer_mat)
+                #     print(f"  -> Created 'He_outer' (ID: {he_outer_mat.id})")
 
                 # elif mat_name == 'Be12Ti':
                 #     print(f"Cloning material: {mat_name} for different components...\n")
@@ -205,11 +213,13 @@ class NuclearFusion:
                 #     print(f"  -> Created 'Be12Ti_outer' (ID: {be12ti_outer_mat.id})")
 
                 else:
+                    output_name = mat_config['output_name']
                     openmc_mat.id = mat_id
-                    self.materials[mat_name] = openmc_mat
-                    nmm_materials_temp[mat_name] = nmm_mat
+                    openmc_mat.name = output_name
+                    self.materials[output_name] = openmc_mat
+                    nmm_materials_temp[output_name] = nmm_mat
                     openmc_materials_list.append(openmc_mat)
-                    print(f"Material {mat_name} loaded (OpenMC ID: {openmc_mat.id}).")
+                    print(f"Material {output_name} loaded (OpenMC ID: {openmc_mat.id}).")
 
             # 증배재만 Thermal scattering data 추가하기 위해 따로 설정
             print(f"\nCreating material: Be12Ti...")

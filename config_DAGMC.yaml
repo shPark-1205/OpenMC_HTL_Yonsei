@@ -21,6 +21,8 @@ materials:
   he:
     temperature: 723 # [K]
     pressure: 8.0E+6 # [Pa]
+    temperature_purge: 723 # [K]
+    pressure_purge: 0.2E+6 # [Pa]
 
 
 # 형상 설정 [cm]
