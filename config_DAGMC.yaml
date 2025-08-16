@@ -70,3 +70,15 @@ mesh_breeder:
   division_x: 60 # z 방향 격자 개수
   division_y: 1 # y 방향 격자 개수
   division_z: 423 # x 방향 격자 개수
+
+# Multiplier만 감싸는 coarse mesh 설정
+mesh_multiplier_outer:
+  x_min: 4.0
+  x_max: 5.8
+  z_min: 1200.958
+  z_max: 1240.958
+  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
+  y_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
+  division_x: 18 # z 방향 격자 개수
+  division_y: 1 # y 방향 격자 개수
+  division_z: 400 # x 방향 격자 개수

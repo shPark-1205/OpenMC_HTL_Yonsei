@@ -687,6 +687,30 @@ class NuclearFusion:
 
             mesh_breeder_filter = openmc.MeshFilter(mesh_breeder, filter_id=101)
 
+            # Multiplier만 감싸는 coarse mesh 생성
+            mesh_multiplier = openmc.RegularMesh(name='multiplier_outer_coarse_mesh')
+            mesh_multiplier_config = self.config['mesh_multiplier_outer']
+
+            mesh_multiplier_z_min = mesh_multiplier_config['z_min']
+            mesh_multiplier_z_max = mesh_multiplier_config['z_max']
+
+            mesh_multiplier_y_center = mesh_breeder_config['y_center']
+            mesh_multiplier_y_thickness = mesh_breeder_config['y_thickness']
+
+            mesh_multiplier_y_min = mesh_multiplier_y_center - (mesh_multiplier_y_thickness / 2.0)
+            mesh_multiplier_y_max = mesh_multiplier_y_center + (mesh_multiplier_y_thickness / 2.0)
+
+            mesh_multiplier_x_min = mesh_multiplier_config['x_min']
+            mesh_multiplier_x_max = mesh_multiplier_config['x_max']
+
+            mesh_multiplier.lower_left = (mesh_multiplier_x_min, mesh_multiplier_y_min, mesh_multiplier_z_min)
+            mesh_multiplier.upper_right = (mesh_multiplier_x_max, mesh_multiplier_y_max, mesh_multiplier_z_max)
+
+            mesh_multiplier.dimension = (mesh_multiplier_config['division_x'], mesh_multiplier_config['division_y'], mesh_multiplier_config['division_z'])
+
+            mesh_multiplier_filter = openmc.MeshFilter(mesh_multiplier, filter_id=201)
+
+
             # tally_flux_heating = openmc.Tally(name='flux_heating', tally_id=11)
             # tally_flux_heating.scores = ['flux', 'heating']
             # tally_flux_heating.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron', 'photon'])]
@@ -694,6 +718,10 @@ class NuclearFusion:
             tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=11)
             tally_local_heating_breeder.scores = ['heating']
             tally_local_heating_breeder.filters = [mesh_breeder_filter, breeder_filter, particle_filter]
+
+            tally_local_heating_multiplier = openmc.Tally(name='local_heating_multiplier', tally_id=12)
+            tally_local_heating_multiplier.scores = ['heating']
+            tally_local_heating_multiplier.filters = [mesh_multiplier_filter, be12ti_outer_filter, particle_filter]
 
             """
             tally_local_heating_eurofer = openmc.Tally(name='local_heating_eurofer', tally_id=12)
@@ -728,6 +756,7 @@ class NuclearFusion:
                 # tally_local_tbr,
                 # tally_local_multiplication,
                 tally_local_heating_breeder,
+                tally_local_heating_multiplier,
                 # tally_local_heating_eurofer,
                 # tally_local_heating_Be12Ti,
                 # tally_local_flux,
