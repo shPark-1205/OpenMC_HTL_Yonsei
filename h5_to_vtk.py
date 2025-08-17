@@ -52,13 +52,28 @@ def conversion_worker(args):
         # 표준편차는 단순히 더하면 안되니까 분산을 구하고 제곱근
         variance_sum_data = np.zeros(mesh.dimension)
 
+        # statepoint 파일의 데이터프레임에서 mesh 이름 찾기
+        mesh_col_name = None
+        if is_multi_index:
+            for col in filtered_df.columns:
+                if col[0].startswith('mesh'):
+                    mesh_col_name = col[0]
+                    break
+
+        if mesh_col_name is None and is_multi_index:
+            return f"Error in Tally {tally_id}: Could not find a mesh column (e.g., 'mesh 1') in the dataframe."
+
         # x, y, z 좌표와 이 좌표에 해당하는 tally의 mean 값 대입
         for _, row in filtered_df.iterrows():
-            x_key = ('mesh 1', 'x') if is_multi_index else 'x'
-            y_key = ('mesh 1', 'y') if is_multi_index else 'y'
-            z_key = ('mesh 1', 'z') if is_multi_index else 'z'
-            mean_key = ('mean', '') if is_multi_index else 'mean'
-            std_dev_key = ('std. dev.', '') if is_multi_index else 'std. dev.'
+            if is_multi_index:
+                x_key = (mesh_col_name, 'x')
+                y_key = (mesh_col_name, 'y')
+                z_key = (mesh_col_name, 'z')
+                mean_key = ('mean', '')
+                std_dev_key = ('std. dev.', '')
+            else:
+                x_key, y_key, z_key, mean_key, std_dev_key = 'x', 'y', 'z', 'mean', 'std. dev.'
+
             idx, idy, idz = int(row[x_key]) - 1, int(row[y_key]) - 1, int(row[z_key]) - 1
 
             # Particle이 neutron과 photon이 있으니 +=를 해서 덮어쓰기 방지
