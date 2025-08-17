@@ -11,31 +11,30 @@ from openmc_plasma_source import tokamak_source, fusion_ring_source, fusion_poin
 from openmc_source_plotter import plot_source_energy, plot_source_position, plot_source_direction
 from dagmc_geometry_slice_plotter import plot_axis_slice
 
-# Unit cell 내부 단면에 무작위 위치의 중성자 소스 분포
-def create_hexagonal_source_points(n_points, z_coord, characteristic_length):
+# unit cross-section 내부 무작위 위치의 중성자 소스 분포
+def create_unit_geometry_source_points(n_points, z_coord, characteristic_length):
 
     points = []
 
-    # 단위 육각형 한 변의 길이
+    # Unit cross-section의 대표 길이 (한 변의 길이)
     # s = pitch * (2.0 / 3.0)
     s = characteristic_length
 
-    # 육각형을 포함하는 가장 작은 사각형 생성
+    # 해석 형상을 충분히 감싸는 큰 사각형 생성
     z = z_coord
     abs_x_max = s * (np.sqrt(3.0) / 2.0)
-    abs_y_max = s
+    abs_y_max = s / 2.0
 
     print(f"\nGenerating {n_points} source points on a unit cross-section at z={z_coord}...")
 
     while len(points) < n_points:
-
+        """해석하고자 하는 형상에 맞게 수정 필요"""
         # 사각형 안에서 무작위 샘플링
-        x = np.random.uniform(-abs_x_max, abs_x_max)
+        x = np.random.uniform(0, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(x) <= abs_x_max) and \
-                    (abs(np.sqrt(3.0) * x - y + s) >= 0) and \
-                    (abs(np.sqrt(3.0) * x + y + s) >= 0)
+        is_inside = (abs(np.sqrt(3.0) * x + y) >= 0) and \
+                    (abs(-np.sqrt(3.0) * x + y) >= 0)
 
         if is_inside:
             points.append((x, y, z))
@@ -314,43 +313,41 @@ class NuclearFusion:
         
         # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
-        hex_prism = openmc.model.HexagonalPrism(
-            edge_length=(self.config['geometry']['characteristic_length']),
-            origin=(0.0, 0.0),
-            orientation='y',
-            boundary_type='periodic'
-        )
+        # hex_prism = openmc.model.HexagonalPrism(
+        #     edge_length=(self.config['geometry']['hex_edge_length'])-0.000001,
+        #     origin=(0.0, 0.0),
+        #     orientation='x',
+        #     boundary_type='periodic'
+        # )
 
         # 1/6 최소 unit cell을 감싸는 삼각기둥 생성
-        # triangle_1_plane = openmc.Plane(
-        #     a=1.0/np.sqrt(3),
-        #     b=-1.0,
-        #     c=0.0,
-        #     d=0.0,
-        #     name='triangle_1_plane',
-        #     boundary_type='reflective'
-        # )
-        #
-        # triangle_2_plane = openmc.Plane(
-        #     a=1.0 / np.sqrt(3),
-        #     b=1.0,
-        #     c=0.0,
-        #     d=0.0,
-        #     name='triangle_2_plane',
-        #     boundary_type='reflective'
-        # )
-        #
-        # triangle_3_plane = openmc.XPlane(
-        #     x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
-        #     name='triangle_3_plane',
-        #     boundary_type='reflective'
-        # )
+        triangle_1_plane = openmc.Plane(
+            a=1.0/np.sqrt(3),
+            b=-1.0,
+            c=0.0,
+            d=0.0,
+            name='triangle_1_plane',
+            boundary_type='reflective'
+        )
+
+        triangle_2_plane = openmc.Plane(
+            a=1.0 / np.sqrt(3),
+            b=1.0,
+            c=0.0,
+            d=0.0,
+            name='triangle_2_plane',
+            boundary_type='reflective'
+        )
+
+        triangle_3_plane = openmc.XPlane(
+            x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
+            name='triangle_3_plane',
+            boundary_type='reflective'
+        )
         z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
         z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
 
-        # final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
-
-        final_region = -hex_prism & +z_min_plane & -z_max_plane
+        final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
@@ -512,10 +509,11 @@ class NuclearFusion:
                 if space_options["type"] == "Point":
                     custom_source.space = openmc.stats.Point(space_options["coords"])
 
-                # Hexagonal Face 소스는 여러 개의 point 소스가 있으니 PointCloud 함수
-                elif space_options["type"] == "Hexagonal Face":
-                    source_positions = create_hexagonal_source_points(
-                        n_points=sim_config['n_source_points'], # 충분한 수의 샘플 수 필요
+                # Unit cross-section 소스는 여러 개의 point 소스가 있으니 PointCloud 함수
+                elif space_options["type"] == "Unit cross-section":
+                    source_positions = create_unit_geometry_source_points(
+                        # mesh tally에 사용한 mesh와 1:1 matching될 정도의 충분한 수 필요
+                        n_points=sim_config['n_source_points'],
                         z_coord=space_options["z_coord"],
                         characteristic_length=space_options["characteristic_length"],
                     )
@@ -591,15 +589,17 @@ class NuclearFusion:
             be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object], filter_id=31)
             be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object], filter_id=32)
             eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object], filter_id=41)
+            tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=51)
 
             # 에너지 filter
             energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
-            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=51)
+            # energy_filter = openmc.EnergyFilter(energy_bins, filter_id=61)
+            energy_filter = openmc.EnergyFilter.from_group_structure('UKAEA-1102')
 
             # Particle filter
-            neutron_filter = openmc.ParticleFilter(['neutron'], filter_id=61)
-            photon_filter = openmc.ParticleFilter(['photon'], filter_id=62)
-            particle_filter = openmc.ParticleFilter(['neutron', 'photon'], filter_id=63)
+            neutron_filter = openmc.ParticleFilter(['neutron'], filter_id=71)
+            photon_filter = openmc.ParticleFilter(['photon'], filter_id=72)
+            particle_filter = openmc.ParticleFilter(['neutron', 'photon'], filter_id=73)
 
 
             '''여기부터는 평균 Tally'''
@@ -625,6 +625,21 @@ class NuclearFusion:
             tally_breeder_flux.scores = ['flux']
             tally_breeder_flux.filters = [breeder_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_breeder_flux)
+
+            tally_multiplier_flux = openmc.Tally(name='multiplier_flux', tally_id=96)
+            tally_multiplier_flux.scores = ['flux']
+            tally_multiplier_flux.filters = [be12ti_outer_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_multiplier_flux)
+
+            tally_armor_flux = openmc.Tally(name='armor_flux', tally_id=95)
+            tally_armor_flux.scores = ['flux']
+            tally_armor_flux.filters = [tungsten_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_armor_flux)
+
+            tally_structure_flux = openmc.Tally(name='structure_flux', tally_id=94)
+            tally_structure_flux.scores = ['flux']
+            tally_structure_flux.filters = [eurofer_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_structure_flux)
 
             '''여기부터는 local Tally'''
 
@@ -825,8 +840,8 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (20.0, 20.0)
-            plot_xy.pixels = (1000, 1000)
+            plot_xy.width = (8.0, 8.0)
+            plot_xy.pixels = (800, 800)
             plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
             plot_xy.color_by = 'material'
@@ -843,8 +858,8 @@ class NuclearFusion:
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
-            plot_zx.width = (20.0, 60.0)
-            plot_zx.pixels = (1000, 3000)
+            plot_zx.width = (8.0, 60.0)
+            plot_zx.pixels = (800, 2400)
             plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_zx.basis = 'xz'
             plot_zx.color_by = 'material'
