@@ -23,18 +23,18 @@ def create_unit_geometry_source_points(n_points, z_coord, characteristic_length)
     # 해석 형상을 충분히 감싸는 큰 사각형 생성
     z = z_coord
     abs_x_max = s * (np.sqrt(3.0) / 2.0)
-    abs_y_max = s / 2.0
+    abs_y_max = s
 
     print(f"\nGenerating {n_points} source points on a unit cross-section at z={z_coord}...")
 
     while len(points) < n_points:
         """해석하고자 하는 형상에 맞게 수정 필요"""
         # 사각형 안에서 무작위 샘플링
-        x = np.random.uniform(0, abs_x_max)
+        x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(np.sqrt(3.0) * x + y) >= 0) and \
-                    (abs(-np.sqrt(3.0) * x + y) >= 0)
+        is_inside = (abs(np.sqrt(3.0) * x - y + s) >= 0) and \
+                    (abs(np.sqrt(3.0) * x + y + s) >= 0)
 
         if is_inside:
             points.append((x, y, z))
