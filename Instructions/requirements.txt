@@ -5,7 +5,7 @@ openmc_tally_unit_converter
 cadquery
 paramak
 openmc_plasma_source
-"neutronics_material_maker[density]"
+neutronics_material_maker[density]
 cad_to_dagmc
 openmc_regular_mesh_plotter
 openmc_cylindrical_mesh_plotter
