@@ -591,14 +591,14 @@ class NuclearFusion:
             eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object], filter_id=41)
             tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=51)
 
-            # 에너지 filter
-            energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
+            # Energy filter
+            # energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
             # energy_filter = openmc.EnergyFilter(energy_bins, filter_id=61)
-            energy_filter = openmc.EnergyFilter.from_group_structure('UKAEA-1102')
+            energy_filter = openmc.EnergyFilter.from_group_structure('UKAEA-1102') # 미리 정의된 에너지 bin 사용
 
             # Particle filter
             neutron_filter = openmc.ParticleFilter(['neutron'], filter_id=71)
-            photon_filter = openmc.ParticleFilter(['photon'], filter_id=72)
+            # photon_filter = openmc.ParticleFilter(['photon'], filter_id=72)
             particle_filter = openmc.ParticleFilter(['neutron', 'photon'], filter_id=73)
 
 
@@ -678,112 +678,76 @@ class NuclearFusion:
             mesh_filter = openmc.MeshFilter(mesh, filter_id=99)
             """
 
-            # Breeder만 감싸는 coarse mesh 생성
-            mesh_breeder = openmc.RegularMesh(name='breeder_coarse_mesh')
+            # 해석 형상을 감싸는 cylindrical mesh 생성
+            mesh_cylindrical_config = self.config['mesh_cylindrical']
 
-            mesh_breeder_config = self.config['mesh_breeder']
+            mesh_cylindrical_r_min = mesh_cylindrical_config['r_min']
+            mesh_cylindrical_r_max = mesh_cylindrical_config['r_max']
+            mesh_division_r = mesh_cylindrical_config['division_r']
 
-            mesh_breeder_z_min = mesh_breeder_config['z_min']
-            mesh_breeder_z_max = mesh_breeder_config['z_max']
+            mesh_cylindrical_z_min = mesh_cylindrical_config['z_min']
+            mesh_cylindrical_z_max = mesh_cylindrical_config['z_max']
+            mesh_division_z = mesh_cylindrical_config['division_z']
 
-            mesh_breeder_y_center = mesh_breeder_config['y_center']
-            mesh_breeder_y_thickness = mesh_breeder_config['y_thickness']
+            mesh_cylindrical_phi_min = mesh_cylindrical_config['phi_min']
+            mesh_cylindrical_phi_max = mesh_cylindrical_config['phi_max']
+            mesh_division_phi = mesh_cylindrical_config['division_phi']
 
-            mesh_breeder_y_min = mesh_breeder_y_center - (mesh_breeder_y_thickness / 2.0)
-            mesh_breeder_y_max = mesh_breeder_y_center + (mesh_breeder_y_thickness / 2.0)
+            mesh_cylindrical = openmc.CylindricalMesh(name='cylindrical_mesh',
+                                                      r_grid=np.linspace(mesh_cylindrical_r_min, mesh_cylindrical_r_max, mesh_division_r),
+                                                      z_grid=np.linspace(mesh_cylindrical_z_min, mesh_cylindrical_z_max, mesh_division_z),
+                                                      phi_grid=np.linspace(mesh_cylindrical_phi_min, mesh_cylindrical_phi_max, mesh_division_phi),
+                                                      origin=(0.0, 0.0, 0.0))
 
-            mesh_breeder_x_min = mesh_breeder_config['x_min']
-            mesh_breeder_x_max = mesh_breeder_config['x_max']
-
-            mesh_breeder.lower_left = (mesh_breeder_x_min, mesh_breeder_y_min, mesh_breeder_z_min)
-            mesh_breeder.upper_right = (mesh_breeder_x_max, mesh_breeder_y_max, mesh_breeder_z_max)
-
-            mesh_breeder.dimension = (mesh_breeder_config['division_x'], mesh_breeder_config['division_y'], mesh_breeder_config['division_z'])
-
-            mesh_breeder_filter = openmc.MeshFilter(mesh_breeder, filter_id=101)
-
-            # Multiplier만 감싸는 coarse mesh 생성
-            mesh_multiplier = openmc.RegularMesh(name='multiplier_outer_coarse_mesh')
-            mesh_multiplier_config = self.config['mesh_multiplier_outer']
-
-            mesh_multiplier_z_min = mesh_multiplier_config['z_min']
-            mesh_multiplier_z_max = mesh_multiplier_config['z_max']
-
-            mesh_multiplier_y_center = mesh_breeder_config['y_center']
-            mesh_multiplier_y_thickness = mesh_breeder_config['y_thickness']
-
-            mesh_multiplier_y_min = mesh_multiplier_y_center - (mesh_multiplier_y_thickness / 2.0)
-            mesh_multiplier_y_max = mesh_multiplier_y_center + (mesh_multiplier_y_thickness / 2.0)
-
-            mesh_multiplier_x_min = mesh_multiplier_config['x_min']
-            mesh_multiplier_x_max = mesh_multiplier_config['x_max']
-
-            mesh_multiplier.lower_left = (mesh_multiplier_x_min, mesh_multiplier_y_min, mesh_multiplier_z_min)
-            mesh_multiplier.upper_right = (mesh_multiplier_x_max, mesh_multiplier_y_max, mesh_multiplier_z_max)
-
-            mesh_multiplier.dimension = (mesh_multiplier_config['division_x'], mesh_multiplier_config['division_y'], mesh_multiplier_config['division_z'])
-
-            mesh_multiplier_filter = openmc.MeshFilter(mesh_multiplier, filter_id=201)
+            mesh_cylindrical_filter = openmc.MeshFilter(mesh_cylindrical, filter_id=100)
 
 
-            # tally_flux_heating = openmc.Tally(name='flux_heating', tally_id=11)
-            # tally_flux_heating.scores = ['flux', 'heating']
-            # tally_flux_heating.filters = [mesh_filter, solid_material_filter, openmc.ParticleFilter(['neutron', 'photon'])]
-
-            tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=11)
+            tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=101)
             tally_local_heating_breeder.scores = ['heating']
-            tally_local_heating_breeder.filters = [mesh_breeder_filter, breeder_filter, particle_filter]
+            tally_local_heating_breeder.filters = [mesh_cylindrical_filter, breeder_filter, particle_filter]
 
-            tally_local_heating_multiplier = openmc.Tally(name='local_heating_multiplier', tally_id=12)
+            tally_local_heating_multiplier = openmc.Tally(name='local_heating_multiplier', tally_id=102)
             tally_local_heating_multiplier.scores = ['heating']
-            tally_local_heating_multiplier.filters = [mesh_multiplier_filter, be12ti_outer_filter, particle_filter]
+            tally_local_heating_multiplier.filters = [mesh_cylindrical_filter, be12ti_outer_filter, particle_filter]
 
-            """
-            tally_local_heating_eurofer = openmc.Tally(name='local_heating_eurofer', tally_id=12)
-            tally_local_heating_eurofer.scores = ['heating']
-            tally_local_heating_eurofer.filters = [mesh_filter, eurofer_filter, particle_filter]
+            tally_local_heating_structure = openmc.Tally(name='local_heating_structure', tally_id=103)
+            tally_local_heating_structure.scores = ['heating']
+            tally_local_heating_structure.filters = [mesh_cylindrical_filter, eurofer_filter, particle_filter]
 
-            tally_local_heating_Be12Ti = openmc.Tally(name='local_heating_Be12Ti', tally_id=13)
-            tally_local_heating_Be12Ti.scores = ['heating']
-            tally_local_heating_Be12Ti.filters = [mesh_filter, be12ti_outer_filter, particle_filter]
-
-            tally_local_flux = openmc.Tally(name='local_flux', tally_id=41)
-            tally_local_flux.scores = ['flux']
-            tally_local_flux.filters = [mesh_filter, solid_material_filter, neutron_filter]
-
-            tally_eurofer_absorption = openmc.Tally(name='eurofer_absorption', tally_id=51)
+            tally_eurofer_absorption = openmc.Tally(name='eurofer_absorption', tally_id=201)
             tally_eurofer_absorption.scores = ['absorption']
-            tally_eurofer_absorption.filters = [mesh_filter, eurofer_filter, neutron_filter]
-            """
+            tally_eurofer_absorption.filters = [mesh_cylindrical_filter, eurofer_filter, neutron_filter]
 
-            # tally_local_tbr = openmc.Tally(name='local_tbr', tally_id=21)
-            # tally_local_tbr.scores = ['H3-production']
-            # tally_local_tbr.nuclides = ['Li6', 'Li7']
-            # tally_local_tbr.filters = [mesh_filter, breeder_filter]
 
-            # tally_local_multiplication = openmc.Tally(name='local_multiplication', tally_id=31)
-            # tally_local_multiplication.scores = ['(n,2n)']
-            # tally_local_multiplication.nuclides = ['Be9']
-            # tally_local_multiplication.filters = [mesh_filter, be12ti_outer_filter]
+            # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
+            mesh_outer_multiplier = openmc.CylindricalMesh(name='outer_multiplier_r_mesh',
+                                                                        r_grid=(4.00, 5.75), # multiplier의 안쪽 면부터 바깥쪽 면까지
+                                                                        z_grid=(1200.958, 1240.958), # multiplier의 축 방향 좌표
+                                                                        phi_grid=(0.0, np.pi/12), # 0 deg ~ 30 deg (-30 deg는 반영 X)
+                                                                        origin=(0.0, 0.0, 0.0))
+
+            mesh_outer_multiplier_r_surface_filter = openmc.MeshSurfaceFilter(mesh_outer_multiplier, filter_id=201)
+
+            tally_current_multiplier = openmc.Tally(name='multiplier_r_current', tally_id=301)
+            tally_current_multiplier.scores = ['current']
+            tally_current_multiplier.filters = [mesh_outer_multiplier_r_surface_filter, energy_filter, neutron_filter]
+
+            self.tallies.append(tally_current_multiplier)
+
 
             local_tallies_list = [
-                # tally_flux_heating,
-                # tally_local_tbr,
-                # tally_local_multiplication,
                 tally_local_heating_breeder,
                 tally_local_heating_multiplier,
-                # tally_local_heating_eurofer,
-                # tally_local_heating_Be12Ti,
-                # tally_local_flux,
-                # tally_eurofer_absorption,
+                tally_local_heating_structure,
+                tally_eurofer_absorption,
+                tally_current_multiplier,
             ]
+
+            self.tallies.extend(local_tallies_list)
 
             # # Tally를 mesh 하나의 부피로 나눌 것인가?
             # for tally in local_tallies_list:
             #     tally.volume_normalization = True
-
-            self.tallies.extend(local_tallies_list)
-
 
             tallies_obj = openmc.Tallies(self.tallies)
             print("\nExporting tallies to tallies.xml...\n")
@@ -989,7 +953,7 @@ class NuclearFusion:
 
                 pbar.set_description("\nGenerating Source Previews")
                 status_window.update_task_status("Source Previews", "Running...", "blue")
-                self.preview_source_distribution(plots_folder='plots')
+                # self.preview_source_distribution(plots_folder='plots')
                 status_window.update_task_status("Source Previews", "OK! ✓", "green")
                 pbar.update(1)
 
