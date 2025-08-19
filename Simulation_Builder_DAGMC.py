@@ -3,13 +3,11 @@
 import openmc
 import numpy as np
 import os
-import time
 import sys
 from tqdm import tqdm
 import neutronics_material_maker as nmm
 from openmc_plasma_source import tokamak_source, fusion_ring_source, fusion_point_source
 from openmc_source_plotter import plot_source_energy, plot_source_position, plot_source_direction
-from dagmc_geometry_slice_plotter import plot_axis_slice
 
 # unit cross-section 내부 무작위 위치의 중성자 소스 분포
 def create_unit_geometry_source_points(n_points, z_coord, characteristic_length):
@@ -763,31 +761,7 @@ class NuclearFusion:
     # 해석 시작 전에 가능한 시각화
     def generate_geometry_2D_plots(self, plots_folder='plots'):
         try:
-            print("\n\n\n--- Generating 2D geometry plots with axes using geometry.plot() ---")
-
-            # Plot에 사용할 색상을 재료에 부여
-            # print("1")
-            # plot_xy = plot_axis_slice(
-            #     dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
-            #     view_direction='-z',
-            #     plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
-            # )
-            #
-            # plot_xy.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_xy.png'), dpi=600)
-            # print("XY geometry plot with axes saved.\n")
-            #
-            # print("2")
-            # plot_yz = plot_axis_slice(
-            #     dagmc_file_or_trimesh_object=self.config['geometry']['h5m_path'],
-            #     view_direction='x',
-            #     plane_origin=[self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord']],
-            # )
-            #
-            # plot_yz.savefig(os.path.join(plots_folder, 'geometry_2D_DAGMC_yz.png'), dpi=600)
-            # print("YZ geometry plot with axes saved.\n")
-
-
-            print("\nGenerating material-colored plot with openmc.plot_geometry...\n\n")
+            print("\n\n\n--- Generating 2D material-colored geometry plots with axes using openmc.Plot() ---")
 
             material_colors = {
                 self.materials['eurofer_pressure_tube']: (128, 128, 128),  # 회색
