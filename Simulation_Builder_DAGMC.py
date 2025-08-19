@@ -695,8 +695,8 @@ class NuclearFusion:
 
             mesh_cylindrical = openmc.CylindricalMesh(name='cylindrical_mesh',
                                                       r_grid=np.linspace(mesh_cylindrical_r_min, mesh_cylindrical_r_max, mesh_division_r),
+                                                      phi_grid=np.linspace(mesh_cylindrical_phi_min,mesh_cylindrical_phi_max, mesh_division_phi),
                                                       z_grid=np.linspace(mesh_cylindrical_z_min, mesh_cylindrical_z_max, mesh_division_z),
-                                                      phi_grid=np.linspace(mesh_cylindrical_phi_min, mesh_cylindrical_phi_max, mesh_division_phi),
                                                       origin=(0.0, 0.0, 0.0))
 
             mesh_cylindrical_filter = openmc.MeshFilter(mesh_cylindrical, filter_id=100)
@@ -953,7 +953,7 @@ class NuclearFusion:
 
                 pbar.set_description("\nGenerating Source Previews")
                 status_window.update_task_status("Source Previews", "Running...", "blue")
-                # self.preview_source_distribution(plots_folder='plots')
+                self.preview_source_distribution(plots_folder='plots')
                 status_window.update_task_status("Source Previews", "OK! ✓", "green")
                 pbar.update(1)
 
