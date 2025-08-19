@@ -148,8 +148,8 @@ class SourceSelectionWindow:
         self.point_y = tk.DoubleVar(value=0.0)
         self.point_z = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius'])
 
-        # Hexagonal 소스 위치 제안
-        self.hex_z_coord_var = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius']) # Major radius 값
+        # Unit cross-section 소스 위치 제안
+        self.unit_cross_section_z_coord_var = tk.DoubleVar(value=self.config['geometry']['tokamak_major_radius']) # Major radius 값
         self.characteristic_length_var = tk.DoubleVar(value=self.config['geometry']['characteristic_length']) # 육각형 한 변 길이
 
         self.space_choice = tk.StringVar(value="Point")
@@ -224,15 +224,15 @@ class SourceSelectionWindow:
         self.custom_frame.grid_remove()
 
         # 사용자에게 플라즈마 소스 위치 입력 받기
-        space_main_frame = tk.LabelFrame(self.custom_frame, text="Space Distribution [cm]", font=self.label_font, padx=10, pady=10)
+        space_main_frame = tk.LabelFrame(self.custom_frame, text="Source points distribution [cm]", font=self.label_font, padx=10, pady=10)
         space_main_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
         space_main_frame.grid_columnconfigure(0, weight=1)
 
         space_radio_frame = tk.Frame(space_main_frame)
         space_radio_frame.grid(row=0, column=0)
 
-        tk.Radiobutton(space_radio_frame, text="Point", variable=self.space_choice, value="Point", command=self._update_space_options).pack(side='left')
-        tk.Radiobutton(space_radio_frame, text="Hexagonal Face", variable=self.space_choice, value="Hexagonal Face", command=self._update_space_options).pack(side='left')
+        tk.Radiobutton(space_radio_frame, text="Single Point", variable=self.space_choice, value="Point", command=self._update_space_options).pack(side='left')
+        tk.Radiobutton(space_radio_frame, text="Unit cross-section (Point cloud)", variable=self.space_choice, value="Unit cross-section", command=self._update_space_options).pack(side='left')
 
         self.space_params_frames = {}
 
@@ -248,15 +248,15 @@ class SourceSelectionWindow:
         tk.Label(point_frame, text="Z:").grid(row=0, column=4, sticky="w")
         tk.Entry(point_frame, textvariable=self.point_z, width=10).grid(row=0, column=5, padx=5)
 
-        # 육각형 단면 좌표 입력받는 창
-        hex_frame = tk.Frame(space_main_frame)
-        self.space_params_frames["Hexagonal Face"] = hex_frame
-        hex_frame.grid(row=1, column=0)
+        # Unit cross-section 좌표 입력받는 창
+        unit_cross_section_frame = tk.Frame(space_main_frame)
+        self.space_params_frames["Unit cross-section"] = unit_cross_section_frame
+        unit_cross_section_frame.grid(row=1, column=0)
 
-        tk.Label(hex_frame, text="Z-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
-        tk.Entry(hex_frame, textvariable=self.hex_z_coord_var, width=10).grid(row=0, column=1, padx=5)
-        tk.Label(hex_frame, text="Hex. edge length (Better not to change):").grid(row=0, column=2, sticky='e')
-        tk.Entry(hex_frame, textvariable=self.characteristic_length_var, width=10).grid(row=0, column=3, padx=5)
+        tk.Label(unit_cross_section_frame, text="Z-plane (Defaults to major radius):").grid(row=0, column=0, sticky='e')
+        tk.Entry(unit_cross_section_frame, textvariable=self.unit_cross_section_z_coord_var, width=10).grid(row=0, column=1, padx=5)
+        tk.Label(unit_cross_section_frame, text="Characteristic length (Better not to change):").grid(row=0, column=2, sticky='e')
+        tk.Entry(unit_cross_section_frame, textvariable=self.characteristic_length_var, width=10).grid(row=0, column=3, padx=5)
 
         # 사용자에게 플라즈마 소스 각도 입력 받기
         angle_main_frame = tk.LabelFrame(self.custom_frame, text="Source direction", font=self.label_font, padx=10, pady=10)
@@ -371,7 +371,7 @@ class SourceSelectionWindow:
         for btn in buttons: btn.config(state='disabled')
         self.custom_frame.grid()
 
-    # 사용자가 custom source의 위치 (Point or Hexagonal)를 선택하면
+    # 사용자가 custom source의 위치 (Point or Unit cross-section)를 선택하면
     def _update_space_options(self):
         selected = self.space_choice.get()
         for frame in self.space_params_frames.values():
@@ -401,8 +401,8 @@ class SourceSelectionWindow:
         space_options = {"type": space_type}
         if space_type == "Point":
             space_options["coords"] = (self.point_x.get(), self.point_y.get(), self.point_z.get())
-        elif space_type == "Hexagonal Face":
-            space_options["z_coord"] = self.hex_z_coord_var.get()
+        elif space_type == "Unit cross-section":
+            space_options["z_coord"] = self.unit_cross_section_z_coord_var.get()
             space_options["characteristic_length"] = self.characteristic_length_var.get()
 
         angle_type = self.angle_choice.get()

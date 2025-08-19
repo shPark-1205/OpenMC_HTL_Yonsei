@@ -31,8 +31,8 @@ def create_unit_geometry_source_points(n_points, z_coord, characteristic_length)
         x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(np.sqrt(3.0) * x - y + s) >= 0) and \
-                    (abs(np.sqrt(3.0) * x + y + s) >= 0)
+        is_inside = (abs(-x + (y * np.sqrt(3.0))) <= np.sqrt(3.0) * s) and \
+                    (abs(x + (y * np.sqrt(3.0))) <= np.sqrt(3.0) * s)
 
         if is_inside:
             points.append((x, y, z))
@@ -309,43 +309,18 @@ class NuclearFusion:
         final_region을 본인 형상에 맞게 수정해야 함.
         """
         
-        # DAGMC 형상을 대표하는 육각기둥 생성 (아주 조금 작게 만들어서 void 공간이 생기지 않도록 하는 것이 좋을 듯)
         # HexagonalPrism은 z축 axis만 지원
-        # hex_prism = openmc.model.HexagonalPrism(
-        #     edge_length=(self.config['geometry']['hex_edge_length'])-0.000001,
-        #     origin=(0.0, 0.0),
-        #     orientation='x',
-        #     boundary_type='periodic'
-        # )
-
-        # 1/6 최소 unit cell을 감싸는 삼각기둥 생성
-        triangle_1_plane = openmc.Plane(
-            a=1.0/np.sqrt(3),
-            b=-1.0,
-            c=0.0,
-            d=0.0,
-            name='triangle_1_plane',
-            boundary_type='reflective'
+        hex_prism = openmc.model.HexagonalPrism(
+            edge_length=(self.config['geometry']['characteristic_length']),
+            origin=(0.0, 0.0),
+            orientation='y',
+            boundary_type='periodic'
         )
 
-        triangle_2_plane = openmc.Plane(
-            a=1.0 / np.sqrt(3),
-            b=1.0,
-            c=0.0,
-            d=0.0,
-            name='triangle_2_plane',
-            boundary_type='reflective'
-        )
-
-        triangle_3_plane = openmc.XPlane(
-            x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
-            name='triangle_3_plane',
-            boundary_type='reflective'
-        )
         z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
         z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
 
-        final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
+        final_region = -hex_prism & +z_min_plane & -z_max_plane
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
@@ -778,8 +753,8 @@ class NuclearFusion:
             # Plot 객체 생성
             plot_xy = openmc.Plot()
             plot_xy.filename = os.path.join(plots_folder, 'geometry_by_material_xy')
-            plot_xy.width = (8.0, 8.0)
-            plot_xy.pixels = (800, 800)
+            plot_xy.width = (15.0, 15.0)
+            plot_xy.pixels = (1500, 1500)
             plot_xy.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_xy.basis = 'xy'
             plot_xy.color_by = 'material'
@@ -796,8 +771,8 @@ class NuclearFusion:
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
-            plot_zx.width = (8.0, 60.0)
-            plot_zx.pixels = (800, 2400)
+            plot_zx.width = (15.0, 60.0)
+            plot_zx.pixels = (1500, 6000)
             plot_zx.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
             plot_zx.basis = 'xz'
             plot_zx.color_by = 'material'
@@ -947,7 +922,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            openmc.run(tracks=True, threads=self.config['simulation']['threads'])
+            # openmc.run(tracks=True, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")
