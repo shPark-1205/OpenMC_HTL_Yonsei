@@ -33,7 +33,7 @@ class FluxPlotterApp:
         tally_frame = ttk.Frame(control_frame)
         tally_frame.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.Y)
         ttk.Label(tally_frame, text="2. Select Tally (ID/Name):").pack(anchor='w')
-        self.tally_listbox = tk.Listbox(tally_frame, height=5, width=40, exportselection=False)
+        self.tally_listbox = tk.Listbox(tally_frame, height=5, width=40, exportselection=False, selectmode=tk.EXTENDED)
         self.tally_listbox.pack(fill=tk.BOTH, expand=True)
 
         norm_frame = ttk.Frame(control_frame)
@@ -137,35 +137,40 @@ class FluxPlotterApp:
             messagebox.showerror("Error", "Normalization factor must be a valid number.")
             return
 
-        selected_text = self.tally_listbox.get(selected_indices[0])
-        tally_id, tally_name = self.tally_info[selected_text]
-
         self.ax.clear()
         combined_data_for_csv = {}
+        self.current_save_info = {'tallies': []}
 
-        for path in self.statepoint_paths:
-            try:
-                with openmc.StatePoint(path) as sp:
-                    tally = sp.get_tally(id=tally_id)
-                    df = tally.get_pandas_dataframe()
+        for index in selected_indices:
+            selected_text = self.tally_listbox.get(index)
+            tally_id, tally_name = self.tally_info[selected_text]
+            self.current_save_info['tallies'].append({'id': tally_id, 'name': tally_name.replace(' ', '_')})
 
-                    if 'material' in df.columns:
-                        df_grouped = df.groupby('energy low [eV]')['mean'].sum().reset_index()
-                    else:
-                        df_grouped = df
+            for path in self.statepoint_paths:
+                try:
+                    with openmc.StatePoint(path) as sp:
+                        tally = sp.get_tally(id=tally_id)
+                        df = tally.get_pandas_dataframe()
 
-                    energy_bins = df_grouped['energy low [eV]']
-                    flux_values = df_grouped['mean'] * norm_factor
+                        if 'material' in df.columns:
+                            df_grouped = df.groupby('energy low [eV]')['mean'].sum().reset_index()
+                        else:
+                            df_grouped = df
 
-                    filename_label = os.path.basename(path)
-                    self.ax.step(energy_bins, flux_values, where='post', label=filename_label)
+                        energy_bins = df_grouped['energy low [eV]']
+                        flux_values = df_grouped['mean'] * norm_factor
 
-                    if 'energy' not in combined_data_for_csv:
-                        combined_data_for_csv['Energy_low [eV]'] = energy_bins
-                    combined_data_for_csv[f'Flux_{filename_label}'] = flux_values
+                        filename = os.path.basename(path)
+                        label = f"{filename} (Tally: {tally_name})"
+                        self.ax.step(energy_bins, flux_values, where='post', label=label)
 
-            except Exception as e:
-                print(f"Warning: Could not process Tally ID {tally_id} in file {os.path.basename(path)}: {e}")
+                        # CSV 저장을 위해 데이터 수집
+                        if 'Energy_low [eV]' not in combined_data_for_csv:
+                            combined_data_for_csv['Energy_low [eV]'] = energy_bins
+                        col_name = f"Flux_{filename}_{tally_name.replace(' ', '_')}"
+                        combined_data_for_csv[col_name] = flux_values
+                except Exception as e:
+                    print(f"Warning: Could not process Tally ID {tally_id} in file {filename}: {e}")
 
         try:
             self.current_plot_data = pd.DataFrame(combined_data_for_csv)
@@ -177,17 +182,12 @@ class FluxPlotterApp:
             self.disable_save_buttons()
             self.current_plot_data = None
 
-        self.current_save_info = {
-            'tally_id': tally_id,
-            'tally_name': tally_name.replace(' ', '_')
-        }
-
-        self.ax.legend()
+        self.ax.legend(fontsize='small')
         self.ax.set_xscale(self.x_scale_var.get())
         self.ax.set_yscale(self.y_scale_var.get())
         self.ax.set_xlabel('Energy [eV]')
         self.ax.set_ylabel('Flux [particles/cm$^2$/s]')
-        self.ax.set_title(f'Flux Comparison (Tally: {tally_name})')
+        self.ax.set_title('Flux Spectrum Comparison')
         self.ax.grid(True, which='both', linestyle='--')
         self.canvas.draw()
 
@@ -207,7 +207,8 @@ class FluxPlotterApp:
 
         try:
             info = self.current_save_info
-            filename = f"comparison_{info['tally_name']}.csv"
+            tally_names = "_".join([t['name'] for t in info['tallies']])
+            filename = f"comparison_combined_{tally_names}.csv"
             full_path = os.path.join(folder_path, filename)
 
             self.current_plot_data.to_csv(full_path, index=False)
@@ -228,29 +229,22 @@ class FluxPlotterApp:
 
         try:
             energy_col = 'Energy_low [eV]'
-            info = self.current_save_info
+            for col_name in self.current_plot_data.columns:
+                if col_name == energy_col: continue
 
-            # 에너지 열을 제외한 각 Flux 열에 대해 반복
-            for flux_col in self.current_plot_data.columns:
-                if flux_col == energy_col:
-                    continue
+                # 'Flux_statepoint.5.h5_my_tally' 에서 정보 추출
+                parts = col_name.split('_', 2)
+                original_basename = os.path.splitext(parts[1])[0]
+                tally_name = parts[2]
 
-                # 원본 파일 이름 추출 (Flux_ 접두사 제거)
-                original_basename = os.path.splitext(flux_col.replace('Flux_', ''))[0]
-
-                # 개별 파일 이름 생성
-                filename = f"{original_basename}_{info['tally_name']}.csv"
+                filename = f"{original_basename}_{tally_name}.csv"
                 full_path = os.path.join(folder_path, filename)
 
-                # 개별 데이터프레임 생성 (에너지, 해당 Flux)
-                individual_df = self.current_plot_data[[energy_col, flux_col]]
-                individual_df = individual_df.rename(columns={flux_col: 'Flux [particles/cm2/s]'})
-
-                # CSV로 저장
+                individual_df = self.current_plot_data[[energy_col, col_name]]
+                individual_df = individual_df.rename(columns={col_name: 'Flux [particles/cm2/s]'})
                 individual_df.to_csv(full_path, index=False)
 
             messagebox.showinfo("Success", f"All individual files successfully saved in:\n{folder_path}")
-
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save individual CSV files:\n{e}")
 
