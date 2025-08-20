@@ -373,10 +373,10 @@ class NuclearFusion:
             self.settings.batches = sim_config['batches']
 
             # Fixed source 해석에서는 의미 없음.
-            self.settings.inactive = sim_config['inactive']
+            # self.settings.inactive = sim_config['inactive']
 
             # 중간 batch에서 해석 결과 저장
-            self.settings.statepoint = {'batches': range(5, sim_config['batches'] + 5, 5)}
+            # self.settings.statepoint = {'batches': range(5, sim_config['batches'] + 5, 5)}
             
             # Traks.h5 파일에 포함할 최대 particle 수
             self.settings.max_tracks = sim_config['max_tracks']
