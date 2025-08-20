@@ -11,7 +11,7 @@ import platform
 
 # 실제 변환 작업을 실행하는 메소드
 def conversion_worker(args):
-    sp_path, tally_id_str, output_dir, score_to_plot, active_filters, mat_id_to_name, is_multi_index_map = args
+    sp_path, tally_id_str, output_dir, score_to_plot, active_filters, mat_id_to_name, is_multi_index_map, should_normalize = args
     tally_id = int(tally_id_str.split(':')[0])
 
     try:
@@ -87,21 +87,27 @@ def conversion_worker(args):
         std_dev_data = np.sqrt(variance_sum_data)
         relative_error_data = np.divide(std_dev_data, full_mesh_data, out=np.zeros_like(full_mesh_data), where=(full_mesh_data != 0))
 
-        # relative error는 % 단위이므로 volume_normalization의 영향을 받으면 안됨.
-        cell_volumes = mesh.volumes
-        relative_error_data *= cell_volumes
+        datasets_to_export = {
+            'mean' : full_mesh_data,
+            'std. dev.' : std_dev_data
+        }
+
+        # 사용자가 volume_normalize를 True로 선택했을 때만 relative error 보상
+        if should_normalize:
+            cell_volumes = mesh.volumes
+            relative_error_data *= cell_volumes # cell volume으로 나누니까 먼저 곱해놓기
+            datasets_to_export['relative error'] = relative_error_data
+        else:
+            datasets_to_export['relative error'] = relative_error_data
+
 
         base_filename_no_ext = os.path.splitext(os.path.basename(sp_path))[0]
         output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}.vtk")
 
         # 사용한 mesh의 크기가 사용자마다 다를 수 있으니 vtk로 내보낼 때 tally를 격자 부피로 정규화
         mesh.write_data_to_vtk(filename=output_filename,
-                               datasets={
-                                   'mean' : full_mesh_data,
-                                   'std. dev.' : std_dev_data,
-                                   'relative error' : relative_error_data,
-                               },
-                               volume_normalization=True)
+                               datasets=datasets_to_export,
+                               volume_normalization=should_normalize)
         return f"Saved {output_filename}"
     except Exception as e:
         return f"Failed to process {os.path.basename(sp_path)} Tally {tally_id}: {e}"
@@ -157,6 +163,9 @@ class PostproGUI:
         ttk.Label(score_frame, text="Score to Visualize:").pack(side='left')
         self.score_combobox = ttk.Combobox(score_frame, textvariable=self.selected_score, state='readonly')
         self.score_combobox.pack(side='left', padx=5)
+        self.normalize_var = tk.BooleanVar(value=True)
+        self.normalize_check = ttk.Checkbutton(score_frame, text="Normalize by Cell Volume", variable=self.normalize_var)
+        self.normalize_check.pack(side='left', padx=20)
         filter_builder_frame = ttk.Frame(options_frame)
         filter_builder_frame.pack(fill='x', padx=5, pady=5)
         self.filter_column_var = tk.StringVar()
@@ -342,12 +351,15 @@ class PostproGUI:
         output_dir = filedialog.askdirectory(title="Select a folder to save VTK files")
         if not output_dir: return
 
+        should_normalize = self.normalize_var.get()
+
         tasks = []
         selected_indices = self.tally_listbox.curselection()
         for sp_path in self.statepoint_paths:
             for index in selected_indices:
                 tally_id_str = self.tally_listbox.get(index)
-                task_args = (sp_path, tally_id_str, output_dir, score_to_plot, self.active_filters, self.mat_id_to_name, self.is_multi_index_map)
+                task_args = (sp_path, tally_id_str, output_dir, score_to_plot,
+                             self.active_filters, self.mat_id_to_name, self.is_multi_index_map, should_normalize)
                 tasks.append(task_args)
 
         # 멀티 프로세서를 사용해서 여러 개의 h5 파일을 변환할 때 병렬적으로 수행
