@@ -97,7 +97,7 @@ def conversion_worker(args):
                                    'std. dev.' : std_dev_data,
                                    'relative error' : relative_error_data,
                                },
-                               volume_normalization=False)
+                               volume_normalization=True)
         return f"Saved {output_filename}"
     except Exception as e:
         return f"Failed to process {os.path.basename(sp_path)} Tally {tally_id}: {e}"
