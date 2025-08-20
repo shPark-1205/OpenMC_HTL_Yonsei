@@ -667,9 +667,18 @@ class NuclearFusion:
             mesh_division_phi = mesh_cylindrical_config['division_phi']
 
             mesh_cylindrical = openmc.CylindricalMesh(name='cylindrical_mesh',
-                                                      r_grid=np.linspace(mesh_cylindrical_r_min, mesh_cylindrical_r_max, mesh_division_r),
-                                                      phi_grid=np.linspace(mesh_cylindrical_phi_min,mesh_cylindrical_phi_max, mesh_division_phi),
-                                                      z_grid=np.linspace(mesh_cylindrical_z_min, mesh_cylindrical_z_max, mesh_division_z),
+                                                      r_grid=np.linspace(
+                                                          mesh_cylindrical_r_min,
+                                                          mesh_cylindrical_r_max,
+                                                          mesh_division_r),
+                                                      phi_grid=np.linspace(
+                                                          mesh_cylindrical_phi_min,
+                                                          mesh_cylindrical_phi_max,
+                                                          mesh_division_phi),
+                                                      z_grid=np.linspace(
+                                                          mesh_cylindrical_z_min,
+                                                          mesh_cylindrical_z_max,
+                                                          mesh_division_z),
                                                       origin=(0.0, 0.0, 0.0))
 
             mesh_cylindrical_filter = openmc.MeshFilter(mesh_cylindrical, filter_id=100)
@@ -693,20 +702,24 @@ class NuclearFusion:
 
 
             # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
+            mesh_outer_multiplier_config = self.config['mesh_outer_multiplier']
             mesh_outer_multiplier = openmc.CylindricalMesh(name='outer_multiplier_r_mesh',
-                                                                        r_grid=(4.00, 5.75), # multiplier의 안쪽 면부터 바깥쪽 면까지
-                                                                        z_grid=(1200.958, 1240.958), # multiplier의 축 방향 좌표
-                                                                        phi_grid=(0.0, np.pi/12), # 0 deg ~ 30 deg (-30 deg는 반영 X)
-                                                                        origin=(0.0, 0.0, 0.0))
+                                                           r_grid=(mesh_outer_multiplier_config['r_min'],
+                                                                   mesh_outer_multiplier_config['r_max']),
+                                                           # multiplier의 안쪽 면부터 바깥쪽 면까지
+                                                           phi_grid=(mesh_outer_multiplier_config['phi_min'],
+                                                                     mesh_outer_multiplier_config['phi_max']),
+                                                           # 0 deg ~ 30 deg (-30 deg는 반영 X)
+                                                           z_grid=(mesh_outer_multiplier_config['z_min'],
+                                                                   mesh_outer_multiplier_config['z_max']),
+                                                           # multiplier의 축 방향 좌표
+                                                           origin=(0.0, 0.0, 0.0)) # z_grid의 기준점
 
             mesh_outer_multiplier_r_surface_filter = openmc.MeshSurfaceFilter(mesh_outer_multiplier, filter_id=201)
 
             tally_current_multiplier = openmc.Tally(name='multiplier_r_current', tally_id=301)
             tally_current_multiplier.scores = ['current']
             tally_current_multiplier.filters = [mesh_outer_multiplier_r_surface_filter, energy_filter, neutron_filter]
-
-            self.tallies.append(tally_current_multiplier)
-
 
             local_tallies_list = [
                 tally_local_heating_breeder,

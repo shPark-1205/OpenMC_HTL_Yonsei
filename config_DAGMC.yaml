@@ -36,7 +36,7 @@ geometry:
 
 # DAGMC 형상 감싸는 박스
 bounding:
-  z_max: 1245.0
+  z_max: 1244.458
   z_min: 898.0
 #  z_height: 100.0
 #  y_width: 100.0
@@ -63,13 +63,13 @@ mesh:
 mesh_cylindrical:
   r_min: 0.0
   r_max: 6.6
-  division_r: 67
+  division_r: 67 # 0.1 cm 격자
   z_min: 1198.258
   z_max: 1244.458
-  division_z: 463
-  phi_min: 0.0
-  phi_max: 0.2618 # 30 deg
-  division_phi: 6
+  division_z: 463 # 0.1 cm 격자
+  phi_min: 0.523599 # 30 deg
+  phi_max: 1.5708 # 90 deg
+  division_phi: 6 # 10 deg 격자
 
 # Breeder만 감싸는 coarse mesh 설정
 mesh_breeder:
@@ -84,13 +84,10 @@ mesh_breeder:
   division_z: 423 # x 방향 격자 개수
 
 # Multiplier만 감싸는 coarse mesh 설정
-mesh_multiplier_outer:
-  x_min: 4.0
-  x_max: 5.8
-  z_min: 1200.958
-  z_max: 1240.958
-  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  y_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 18 # z 방향 격자 개수
-  division_y: 1 # y 방향 격자 개수
-  division_z: 400 # x 방향 격자 개수
+mesh_outer_multiplier:
+  r_min: 4.0 # 안쪽 반지름
+  r_max: 5.75 # 바깥쪽 반지름
+  phi_min: 0.523599 # 30 deg
+  phi_max: 1.5708 # 90 deg
+  z_min: 1200.958 # FW쪽 z 좌표
+  z_max: 1240.958 # BSS쪽 z 좌표
