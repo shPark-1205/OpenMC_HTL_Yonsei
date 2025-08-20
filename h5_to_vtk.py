@@ -87,6 +87,10 @@ def conversion_worker(args):
         std_dev_data = np.sqrt(variance_sum_data)
         relative_error_data = np.divide(std_dev_data, full_mesh_data, out=np.zeros_like(full_mesh_data), where=(full_mesh_data != 0))
 
+        # relative error는 % 단위이므로 volume_normalization의 영향을 받으면 안됨.
+        cell_volumes = mesh.volumes
+        relative_error_data *= cell_volumes
+
         base_filename_no_ext = os.path.splitext(os.path.basename(sp_path))[0]
         output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}.vtk")
 
