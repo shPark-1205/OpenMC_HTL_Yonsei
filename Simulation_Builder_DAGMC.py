@@ -103,7 +103,9 @@ class NuclearFusion:
             nmm_materials_temp = {}
 
             self.material_configs = [
-                {'id': 100, 'nmm_name': 'eurofer', 'output_name': 'eurofer_base', 'kwargs': {}},
+                {'id': 100, 'nmm_name': 'eurofer', 'output_name': 'eurofer_base', 'kwargs': {
+                    'temperature': self.config['materials']['eurofer']['temperature'],
+                }},
 
                 # 유체는 온도/압력 정의 필수
                 {'id': 201, 'nmm_name': 'He', 'output_name': 'He_inner', 'kwargs': {
@@ -123,9 +125,11 @@ class NuclearFusion:
                 # 증식재의 Li6 enrichment정의 가능
                 {'id': 402, 'nmm_name': 'Li4SiO4', 'output_name': 'Li4SiO4', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
+                    'temperature': self.config['materials']['breeder']['temperature'],
                 }},
                 {'id': 403, 'nmm_name': 'Li2TiO3', 'output_name': 'Li2TiO3', 'kwargs': {
                     'enrichment': self.config['materials']['breeder']['li_enrichment'],
+                    'temperature': self.config['materials']['breeder']['temperature'],
                 }},
                 # {'id': 500, 'name': 'Be12Ti', 'kwargs': {}},
             ]
@@ -223,7 +227,7 @@ class NuclearFusion:
             Be12Ti_inner_mat = openmc.Material(name='Be12Ti_inner', material_id=501)
             Be12Ti_inner_mat.add_elements_from_formula('Be12Ti')
             Be12Ti_inner_mat.set_density('g/cm3', 2.27)
-            Be12Ti_inner_mat.temperature = 400
+            Be12Ti_inner_mat.temperature = self.config['materials']['multiplier']['temperature']
 
             # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
             # FENDL 라이브러리에는 thermal scattering data가 없기 때문에 예외 처리
@@ -250,12 +254,13 @@ class NuclearFusion:
             mat1 = nmm_materials_temp['Li4SiO4']
             mat2 = nmm_materials_temp['Li2TiO3']
 
-            # 65% Li4SiO4와 35% Be12Ti를 부피비(vo)로 혼합
+            # 65% Li4SiO4와 35% Li2TiO3를 부피비(vo)로 혼합
             mixed_breeder_material = nmm.Material.from_mixture(
                 materials=[mat1, mat2],
                 fracs=[self.config['materials']['breeder']['mixture_Li4SiO4'], self.config['materials']['breeder']['mixture_Li2TiO3']],
                 percent_type='vo',
                 packing_fraction=self.config['materials']['breeder']['packing_fraction'],
+                temperature=self.config['materials']['breeder']['temperature'],
                 name='breeder_pebble_mix'  # 새로운 재료의 이름 지정
             )
 
@@ -935,7 +940,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            # openmc.run(tracks=True, threads=self.config['simulation']['threads'])
+            openmc.run(tracks=True, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")

@@ -3,8 +3,8 @@
 
 # 해석 설정
 simulation:
-  particles: 10000 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
-  batches: 10 # 해석의 iteration
+  particles: 100 # Batch 1회 당 particle generation (늘리면 통계 오차 감소)
+  batches: 5 # 해석의 iteration
   inactive: 0
   n_source_points: 10000
   max_tracks: 10000
@@ -17,7 +17,14 @@ materials:
     packing_fraction: 0.64
     mixture_Li4SiO4: 0.65
     mixture_Li2TiO3: 0.35
-    
+    temperature: 1200 # [K]
+
+  multiplier:
+    temperature: 1200 # [K]
+
+  eurofer:
+    temperature: 800 # [K]
+
   he:
     temperature: 723 # [K]
     pressure: 8.0E+6 # [Pa]
