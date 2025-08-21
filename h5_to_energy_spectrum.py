@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
-class FluxPlotterApp:
+class SpectrumPlotterApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("OpenMC Flux Spectrum Plotter")
+        self.root.title("OpenMC Energy Spectrum Plotter")
         self.root.geometry("1100x800")
 
         # 데이터 저장을 위한 변수
@@ -25,6 +25,15 @@ class FluxPlotterApp:
 
         self.plot_frame = ttk.Frame(root)
         self.plot_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+        author_frame = ttk.Frame(control_frame)
+        author_frame.pack(side=tk.RIGHT, anchor='ne', padx=5)
+
+        author_label = tk.Label(author_frame, text="Seong-Hyeok Park", anchor='e')
+        author_label.pack(side=tk.TOP, fill='x')
+
+        author_email_label = tk.Label(author_frame, text="okayshpark@yonsei.ac.kr", anchor='e')
+        author_email_label.pack(side=tk.TOP, fill='x')
         
         # 버튼들 생성
         self.btn_select = ttk.Button(control_frame, text="1. Select StatePoint Files", command=self.select_files)
@@ -35,17 +44,31 @@ class FluxPlotterApp:
         ttk.Label(tally_frame, text="2. Select Tally (ID/Name):").pack(anchor='w')
         self.tally_listbox = tk.Listbox(tally_frame, height=5, width=40, exportselection=False, selectmode=tk.EXTENDED)
         self.tally_listbox.pack(fill=tk.BOTH, expand=True)
+        self.tally_listbox.bind('<<ListboxSelect>>', self.on_tally_select)
 
-        norm_frame = ttk.Frame(control_frame)
-        norm_frame.pack(side=tk.LEFT, padx=5, pady=5)
-        ttk.Label(norm_frame, text="3. Normalization Factor:").pack(anchor='w')
-        self.norm_factor_var = tk.StringVar(value="1.0")
-        self.norm_factor_entry = ttk.Entry(norm_frame, textvariable=self.norm_factor_var, width=20)
-        self.norm_factor_entry.pack(anchor='w')
+        score_frame = ttk.Frame(control_frame)
+        score_frame.pack(side=tk.LEFT, padx=5, pady=5)
+        ttk.Label(score_frame, text="3. Select Score:").pack(anchor='w')
+        self.score_var = tk.StringVar()
+        self.score_combo = ttk.Combobox(score_frame, textvariable=self.score_var, state='readonly', width=20)
+        self.score_combo.pack(anchor='w')
+
+        options_frame = ttk.Frame(control_frame)
+        options_frame.pack(side=tk.LEFT, padx=10, pady=5)
+
+        ttk.Label(options_frame, text="4. Source Rate [neutrons/s]:").pack(anchor='w')
+        self.source_rate_var = tk.StringVar(value="7.13E+20")
+        self.source_rate_entry = ttk.Entry(options_frame, textvariable=self.source_rate_var, width=20)
+        self.source_rate_entry.pack(anchor='w', pady=(0, 5))
+
+        ttk.Label(options_frame, text="5. Cell Volume [cm³] (for flux only):").pack(anchor='w')
+        self.volume_var = tk.StringVar(value="1.0")
+        self.volume_entry = ttk.Entry(options_frame, textvariable=self.volume_var, width=20)
+        self.volume_entry.pack(anchor='w', pady=(0, 10))
 
         scale_frame = ttk.Frame(control_frame)
         scale_frame.pack(side=tk.LEFT, padx=10, pady=5)
-        ttk.Label(scale_frame, text="4. Axis Scales:").pack(anchor='w')
+        ttk.Label(scale_frame, text="6. Axis Scales:").pack(anchor='w')
 
         self.x_scale_var = tk.StringVar(value="log")
         self.y_scale_var = tk.StringVar(value="log")
@@ -64,12 +87,12 @@ class FluxPlotterApp:
 
         button_frame = ttk.Frame(control_frame)
         button_frame.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.Y)
-        self.btn_plot = ttk.Button(button_frame, text="5. Plot Comparison", command=self.plot_tally_comparison)
+        self.btn_plot = ttk.Button(button_frame, text="7. Plot Comparison", command=self.plot_tally_comparison)
         self.btn_plot.pack(fill=tk.X, pady=2)
 
         save_button_frame = ttk.Frame(control_frame)
         save_button_frame.pack(side=tk.LEFT, padx=5, pady=5)
-        ttk.Label(save_button_frame, text="6. Save Data:").pack(anchor='w')
+        ttk.Label(save_button_frame, text="8. Save Data:").pack(anchor='w')
         self.btn_save_combined = ttk.Button(save_button_frame, text="Save Combined CSV", command=self.save_combined_csv, state=tk.DISABLED)
         self.btn_save_combined.pack(fill=tk.X, pady=2)
         self.btn_save_individual = ttk.Button(save_button_frame, text="Save Individual CSVs", command=self.save_individual_csvs, state=tk.DISABLED)
@@ -84,8 +107,8 @@ class FluxPlotterApp:
     # statepoint 파일 선택 전 초기 그래프 생성
     def setup_initial_plot(self):
         self.ax.set_xlabel('Energy [eV]')
-        self.ax.set_ylabel('Flux [particles/cm$^2$/s]')
-        self.ax.set_title('Neutron Flux Spectrum')
+        self.ax.set_ylabel('Selected tallies will appear here')
+        self.ax.set_title('Selected tallies will appear here')
         self.ax.grid(True, which='both', linestyle='--')
         self.ax.set_xscale(self.x_scale_var.get())
         self.ax.set_yscale(self.y_scale_var.get())
@@ -124,22 +147,51 @@ class FluxPlotterApp:
             self.tally_listbox.insert(tk.END, display_text)
             self.tally_info[display_text] = (tally_id, tally_name)
     
+    # tally 선택하면 score 목록 출력
+    def on_tally_select(self, event):
+        selected_indices = self.tally_listbox.curselection()
+        if not selected_indices:
+            return
+
+        selected_text = self.tally_listbox.get(selected_indices[0])
+        tally_id, _ = self.tally_info[selected_text]
+
+        path = self.statepoint_paths[0]
+        try:
+            with openmc.StatePoint(path) as sp:
+                tally = sp.get_tally(id=tally_id)
+                scores = tally.scores
+
+                if scores:
+                    self.score_combo['values'] = scores
+                    self.score_var.set(scores[0])
+                else:
+                    self.score_combo['values'] = []
+                    self.score_var.set('')
+        except Exception as e:
+            print(f"Warning: Could not get scores from tally:\n{e}")
+
     # tally 선택 후 그래프 그리기
     def plot_tally_comparison(self):
         selected_indices = self.tally_listbox.curselection()
         if not selected_indices:
-            messagebox.showwarning("Warning", "Please select a tally to plot.")
-            return
+            return messagebox.showwarning("Warning", "Please select a tally to plot.")
+
+        selected_score = self.score_var.get()
+        if not selected_score:
+            return messagebox.showwarning("Warning", "Please select a score to plot.")
 
         try:
-            norm_factor = float(self.norm_factor_var.get())
-        except ValueError:
-            messagebox.showerror("Error", "Normalization factor must be a valid number.")
-            return
+            source_rate = float(self.source_rate_var.get())
+            volume = float(self.volume_var.get())
+            if volume == 0 and selected_score == 'flux':
+                raise ValueError("Volume must be non-zero for flux.")
+        except ValueError as e:
+            return messagebox.showerror("Error", "Invalid input for Source Rate or Cell Volume:\n{e}")
 
         self.ax.clear()
         combined_data_for_csv = {}
-        self.current_save_info = {'tallies': []}
+        self.current_save_info = {'tallies': [], 'score': selected_score}
 
         for index in selected_indices:
             selected_text = self.tally_listbox.get(index)
@@ -152,23 +204,30 @@ class FluxPlotterApp:
                         tally = sp.get_tally(id=tally_id)
                         df = tally.get_pandas_dataframe()
 
+                        df_filtered = df[df['score'] == selected_score]
+
                         if 'material' in df.columns:
-                            df_grouped = df.groupby('energy low [eV]')['mean'].sum().reset_index()
+                            df_grouped = df_filtered.groupby('energy low [eV]')['mean'].sum().reset_index()
                         else:
-                            df_grouped = df
+                            df_grouped = df_filtered
 
                         energy_bins = df_grouped['energy low [eV]']
-                        flux_values = df_grouped['mean'] * norm_factor
+                        raw_values = df_grouped['mean']
+
+                        if selected_score == 'flux':
+                            normalized_values = raw_values * source_rate / volume
+                        else:
+                            normalized_values = raw_values * source_rate
 
                         filename = os.path.basename(path)
                         label = f"{filename} (Tally: {tally_name})"
-                        self.ax.step(energy_bins, flux_values, where='post', label=label)
+                        self.ax.step(energy_bins, normalized_values, where='post', label=label)
 
                         # CSV 저장을 위해 데이터 수집
                         if 'Energy_low [eV]' not in combined_data_for_csv:
                             combined_data_for_csv['Energy_low [eV]'] = energy_bins
                         col_name = f"Flux_{filename}_{tally_name.replace(' ', '_')}"
-                        combined_data_for_csv[col_name] = flux_values
+                        combined_data_for_csv[col_name] = normalized_values
                 except Exception as e:
                     print(f"Warning: Could not process Tally ID {tally_id} in file {filename}: {e}")
 
@@ -182,12 +241,17 @@ class FluxPlotterApp:
             self.disable_save_buttons()
             self.current_plot_data = None
 
+        if selected_score == 'flux':
+            y_label = 'Flux [particles/cm$^2$/s]'
+        else:
+            y_label = f'{selected_score.capitalize()} Rate [reactions/s]'
+
         self.ax.legend(fontsize='small')
         self.ax.set_xscale(self.x_scale_var.get())
         self.ax.set_yscale(self.y_scale_var.get())
         self.ax.set_xlabel('Energy [eV]')
-        self.ax.set_ylabel('Flux [particles/cm$^2$/s]')
-        self.ax.set_title('Flux Spectrum Comparison')
+        self.ax.set_ylabel(y_label)
+        self.ax.set_title(f'{selected_score.capitalize()} Spectrum Comparison')
         self.ax.grid(True, which='both', linestyle='--')
         self.canvas.draw()
 
@@ -251,5 +315,5 @@ class FluxPlotterApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = FluxPlotterApp(root)
+    app = SpectrumPlotterApp(root)
     root.mainloop()
