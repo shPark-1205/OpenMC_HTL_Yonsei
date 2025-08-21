@@ -11,7 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 class CurrentPlotterApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("OpenMC Current Tally Plotter (Multi-Tally)")
+        self.root.title("OpenMC Current Tally Plotter")
         self.root.geometry("1100x800")
 
         # 데이터 저장을 위한 변수
@@ -27,13 +27,22 @@ class CurrentPlotterApp:
         self.plot_frame = ttk.Frame(root)
         self.plot_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
-        # --- 컨트롤 위젯 ---
+        author_frame = ttk.Frame(control_frame)
+        author_frame.pack(side=tk.RIGHT, anchor='ne', padx=5)
+
+        author_label = tk.Label(author_frame, text="Seong-Hyeok Park", anchor='e')
+        author_label.pack(side=tk.TOP, fill='x')
+
+        author_email_label = tk.Label(author_frame, text="okayshpark@yonsei.ac.kr", anchor='e')
+        author_email_label.pack(side=tk.TOP, fill='x')
+
+        # 버튼들 생성
         self.btn_select = ttk.Button(control_frame, text="1. Select StatePoint Files", command=self.select_files)
         self.btn_select.pack(side=tk.LEFT, padx=5, pady=5)
 
         tally_frame = ttk.Frame(control_frame)
         tally_frame.pack(side=tk.LEFT, padx=5, pady=5)
-        ttk.Label(tally_frame, text="2. Select Tally(s) (Ctrl+Click):").pack(anchor='w')
+        ttk.Label(tally_frame, text="2. Select Tally(s):").pack(anchor='w')
         self.tally_listbox = tk.Listbox(tally_frame, height=5, width=40, exportselection=False, selectmode=tk.EXTENDED)
         self.tally_listbox.pack(fill=tk.BOTH, expand=True)
         self.tally_listbox.bind('<<ListboxSelect>>', self.on_tally_select)
@@ -48,12 +57,12 @@ class CurrentPlotterApp:
         options_frame = ttk.Frame(control_frame)
         options_frame.pack(side=tk.LEFT, padx=10, pady=5)
 
-        ttk.Label(options_frame, text="Normalization Factor:").pack(anchor='w')
+        ttk.Label(options_frame, text="4. Normalization Factor:").pack(anchor='w')
         self.norm_factor_var = tk.StringVar(value="1.0")
         self.norm_factor_entry = ttk.Entry(options_frame, textvariable=self.norm_factor_var, width=15)
         self.norm_factor_entry.pack(anchor='w', pady=(0, 10))
 
-        ttk.Label(options_frame, text="Axis Scales:").pack(anchor='w')
+        ttk.Label(options_frame, text="5. Axis Scales:").pack(anchor='w')
         self.x_scale_var = tk.StringVar(value="log")
         self.y_scale_var = tk.StringVar(value="linear")
 
@@ -71,13 +80,17 @@ class CurrentPlotterApp:
 
         action_frame = ttk.Frame(control_frame)
         action_frame.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.Y)
-        self.btn_plot = ttk.Button(action_frame, text="Plot Selected Surface", command=self.plot_tally)
+        self.btn_plot = ttk.Button(action_frame, text="6. Plot Selected Surface", command=self.plot_tally)
         self.btn_plot.pack(fill=tk.X, pady=2)
 
-        self.btn_save_combined = ttk.Button(action_frame, text="Save Combined CSV", command=self.save_combined_csv,
-                                            state=tk.DISABLED)
+        save_button_frame = ttk.Frame(control_frame)
+        save_button_frame.pack(side=tk.LEFT, padx=5, pady=5)
+
+        ttk.Label(save_button_frame, text="7. Save Data:").pack(anchor='w')
+        self.btn_save_combined = ttk.Button(save_button_frame, text="Save Combined CSV",
+                                            command=self.save_combined_csv, state=tk.DISABLED)
         self.btn_save_combined.pack(fill=tk.X, pady=2)
-        self.btn_save_individual = ttk.Button(action_frame, text="Save Individual CSVs",
+        self.btn_save_individual = ttk.Button(save_button_frame, text="Save Individual CSVs",
                                               command=self.save_individual_csvs, state=tk.DISABLED)
         self.btn_save_individual.pack(fill=tk.X, pady=2)
 
