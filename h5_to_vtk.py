@@ -13,6 +13,7 @@ import platform
 def conversion_worker(args):
     sp_path, tally_id_str, output_dir, score_to_plot, active_filters, mat_id_to_name, is_multi_index_map, should_normalize = args
     tally_id = int(tally_id_str.split(':')[0])
+    norm_suffix = "VolumeNormalized" if should_normalize else "NoVolumeNormalization"
 
     try:
         sp = openmc.StatePoint(sp_path)
@@ -102,15 +103,16 @@ def conversion_worker(args):
 
 
         base_filename_no_ext = os.path.splitext(os.path.basename(sp_path))[0]
-        output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}.vtk")
+        output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}_{norm_suffix}.vtk")
 
         # 사용한 mesh의 크기가 사용자마다 다를 수 있으니 vtk로 내보낼 때 tally를 격자 부피로 정규화
         mesh.write_data_to_vtk(filename=output_filename,
                                datasets=datasets_to_export,
                                volume_normalization=should_normalize)
-        return f"Saved {output_filename}"
+        return ('Success!', f"Saved to {output_filename}")
+
     except Exception as e:
-        return f"Failed to process {os.path.basename(sp_path)} Tally {tally_id}: {e}"
+        return ('error', f"Failed to process {os.path.basename(sp_path)} Tally {tally_id}: {e}")
 
 
 class PostproGUI:
@@ -375,17 +377,30 @@ class PostproGUI:
         self.progress_bar['maximum'] = len(tasks)
         self.progress_bar['value'] = 0
 
+        failed_tasks_messages = []
+
         # 멀티 프로세서 진행
         with multiprocessing.Pool(processes=num_processes) as pool:
+            # imap_unordered로부터 (상태, 메세지) 튜플 받기
             results_iterator = pool.imap_unordered(conversion_worker, tasks)
-            for i, result_msg in enumerate(results_iterator):
-                print(result_msg)
+            for i, (status, result_msg) in enumerate(results_iterator):
+                print(result_msg) # 콘솔에 결과 출력
+
+                if status == 'error':
+                    failed_tasks_messages.append(result_msg)
                 self.progress_bar['value'] = i + 1
                 self.status_label.config(text=f"Processing {i + 1}/{len(tasks)}...")
                 self.root.update_idletasks()
 
-        self.status_label.config(text=f"Batch conversion complete! {len(tasks)} tasks processed.")
-        messagebox.showinfo("Success", f"Batch conversion complete! Files are saved in:\n{output_dir}")
+        if not failed_tasks_messages:
+            self.status_label.config(text=f"Batch conversion complete! {len(tasks)} tasks processed.")
+            messagebox.showinfo("Success", f"Batch conversion complete! Files are saved in:\n{output_dir}")
+        else:
+            self.status_label.config(text=f"Conversion finished with {len(failed_tasks_messages)} error(s).")
+            error_details = "\n\n".join(failed_tasks_messages)
+            messagebox.showwarning("Conversion Finished with Errors",
+                                   f"{len(failed_tasks_messages)} out of {len(tasks)} tasks failed.\n\n"
+                                   f"Error details:\n{error_details}")
 
 
 if __name__ == '__main__':
