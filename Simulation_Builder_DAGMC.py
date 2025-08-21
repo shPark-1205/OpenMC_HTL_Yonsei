@@ -599,25 +599,25 @@ class NuclearFusion:
             tally_multiplying.filters = [be12ti_outer_filter]
             self.tallies.append(tally_multiplying)
 
-            tally_breeder_flux = openmc.Tally(name='breeder_flux', tally_id=97)
-            tally_breeder_flux.scores = ['flux']
-            tally_breeder_flux.filters = [breeder_filter, neutron_filter, energy_filter]
-            self.tallies.append(tally_breeder_flux)
+            tally_global_structure = openmc.Tally(name='global_structure', tally_id=94)
+            tally_global_structure.scores = ['flux', 'absorption', 'elastic']
+            tally_global_structure.filters = [eurofer_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_global_structure)
 
-            tally_multiplier_flux = openmc.Tally(name='multiplier_flux', tally_id=96)
-            tally_multiplier_flux.scores = ['flux']
-            tally_multiplier_flux.filters = [be12ti_outer_filter, neutron_filter, energy_filter]
-            self.tallies.append(tally_multiplier_flux)
+            tally_global_armor = openmc.Tally(name='global_armor', tally_id=95)
+            tally_global_armor.scores = ['flux', 'absorption', 'elastic']
+            tally_global_armor.filters = [tungsten_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_global_armor)
 
-            tally_armor_flux = openmc.Tally(name='armor_flux', tally_id=95)
-            tally_armor_flux.scores = ['flux']
-            tally_armor_flux.filters = [tungsten_filter, neutron_filter, energy_filter]
-            self.tallies.append(tally_armor_flux)
+            tally_global_multiplier = openmc.Tally(name='global_multiplier', tally_id=96)
+            tally_global_multiplier.scores = ['flux', 'absorption', 'elastic']
+            tally_global_multiplier.filters = [be12ti_outer_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_global_multiplier)
 
-            tally_structure_flux = openmc.Tally(name='structure_flux', tally_id=94)
-            tally_structure_flux.scores = ['flux']
-            tally_structure_flux.filters = [eurofer_filter, neutron_filter, energy_filter]
-            self.tallies.append(tally_structure_flux)
+            tally_global_breeder = openmc.Tally(name='global_breeder', tally_id=97)
+            tally_global_breeder.scores = ['flux', 'absorption', 'elastic']
+            tally_global_breeder.filters = [breeder_filter, neutron_filter, energy_filter]
+            self.tallies.append(tally_global_breeder)
 
             '''여기부터는 local Tally'''
 
@@ -659,31 +659,19 @@ class NuclearFusion:
             # 해석 형상을 감싸는 cylindrical mesh 생성
             mesh_cylindrical_config = self.config['mesh_cylindrical']
 
-            mesh_cylindrical_r_min = mesh_cylindrical_config['r_min']
-            mesh_cylindrical_r_max = mesh_cylindrical_config['r_max']
-            mesh_division_r = mesh_cylindrical_config['division_r']
-
-            mesh_cylindrical_z_min = mesh_cylindrical_config['z_min']
-            mesh_cylindrical_z_max = mesh_cylindrical_config['z_max']
-            mesh_division_z = mesh_cylindrical_config['division_z']
-
-            mesh_cylindrical_phi_min = mesh_cylindrical_config['phi_min']
-            mesh_cylindrical_phi_max = mesh_cylindrical_config['phi_max']
-            mesh_division_phi = mesh_cylindrical_config['division_phi']
-
             mesh_cylindrical = openmc.CylindricalMesh(name='cylindrical_mesh',
                                                       r_grid=np.linspace(
-                                                          mesh_cylindrical_r_min,
-                                                          mesh_cylindrical_r_max,
-                                                          mesh_division_r),
+                                                          mesh_cylindrical_config['r_min'],
+                                                          mesh_cylindrical_config['r_max'],
+                                                          mesh_cylindrical_config['division_r']),
                                                       phi_grid=np.linspace(
-                                                          mesh_cylindrical_phi_min,
-                                                          mesh_cylindrical_phi_max,
-                                                          mesh_division_phi),
+                                                          mesh_cylindrical_config['phi_min'],
+                                                          mesh_cylindrical_config['phi_max'],
+                                                          mesh_cylindrical_config['division_phi']),
                                                       z_grid=np.linspace(
-                                                          mesh_cylindrical_z_min,
-                                                          mesh_cylindrical_z_max,
-                                                          mesh_division_z),
+                                                          mesh_cylindrical_config['z_min'],
+                                                          mesh_cylindrical_config['z_max'],
+                                                          mesh_cylindrical_config['division_z']),
                                                       origin=(0.0, 0.0, 0.0))
 
             mesh_cylindrical_filter = openmc.MeshFilter(mesh_cylindrical, filter_id=100)
@@ -700,10 +688,6 @@ class NuclearFusion:
             tally_local_heating_structure = openmc.Tally(name='local_heating_structure', tally_id=103)
             tally_local_heating_structure.scores = ['heating']
             tally_local_heating_structure.filters = [mesh_cylindrical_filter, eurofer_filter, particle_filter]
-
-            tally_eurofer_absorption = openmc.Tally(name='eurofer_absorption', tally_id=201)
-            tally_eurofer_absorption.scores = ['absorption']
-            tally_eurofer_absorption.filters = [mesh_cylindrical_filter, eurofer_filter, neutron_filter]
 
 
             # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
@@ -730,7 +714,6 @@ class NuclearFusion:
                 tally_local_heating_breeder,
                 tally_local_heating_multiplier,
                 tally_local_heating_structure,
-                tally_eurofer_absorption,
                 tally_current_multiplier,
             ]
 
