@@ -119,7 +119,7 @@ class PostproGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("OpenMC Parallel Post-Processor & VTK Converter")
-        self.root.geometry("1200x800")
+        self.root.geometry("1200x1000")
 
         self.statepoint_paths = []
         self.statepoint_path = tk.StringVar()
@@ -166,7 +166,7 @@ class PostproGUI:
         self.score_combobox = ttk.Combobox(score_frame, textvariable=self.selected_score, state='readonly')
         self.score_combobox.pack(side='left', padx=5)
         self.normalize_var = tk.BooleanVar(value=True)
-        self.normalize_check = ttk.Checkbutton(score_frame, text="Normalize by Cell Volume", variable=self.normalize_var)
+        self.normalize_check = ttk.Checkbutton(score_frame, text="Normalize by Cell Volume (Not applicable for global tallies)", variable=self.normalize_var)
         self.normalize_check.pack(side='left', padx=20)
         filter_builder_frame = ttk.Frame(options_frame)
         filter_builder_frame.pack(fill='x', padx=5, pady=5)
@@ -192,9 +192,12 @@ class PostproGUI:
         self.cpu_cores_var = tk.IntVar(value=max_cores)
         ttk.Entry(cpu_frame, textvariable=self.cpu_cores_var, width=10).pack(side='left', padx=5)
         ttk.Label(cpu_frame, text=f"(Max: {max_cores})").pack(side='left')
-
-        convert_button = ttk.Button(main_frame, text="Convert Selected Tallies to VTK...", command=self._convert_to_vtk)
-        convert_button.pack(pady=20, fill='x')
+        action_frame = ttk.Frame(main_frame)
+        action_frame.pack(fill='x', pady=10)
+        ttk.Button(action_frame, text="Convert Selected Mesh (Local) Tallies to VTK...", command=self._convert_to_vtk).pack(
+            side='left', expand=True, fill='x', padx=5)
+        ttk.Button(action_frame, text="Export Selected Global (No mesh) Tallies to CSV...",
+                   command=self._export_global_tallies).pack(side='left', expand=True, fill='x', padx=5)
 
         status_frame = ttk.LabelFrame(main_frame, text="Status")
         status_frame.pack(fill='x', pady=5)
@@ -291,8 +294,12 @@ class PostproGUI:
             for _, row in display_df.head(200).iterrows():
                 self.tree.insert("", "end", values=list(row))
 
-            self.score_combobox['values'] = self.current_tally.scores
-            if self.current_tally.scores: self.selected_score.set(self.current_tally.scores[0])
+            scores = self.current_tally.scores
+            display_scores = ['-- ALL SCORES --'] + scores if scores else []
+            self.score_combobox['values'] = display_scores
+
+            if display_scores:
+                self.selected_score.set(display_scores[0])
 
             # 선택할 수 있는 filter는 mesh를 제외한 다른 filter
             if is_multi_index:
