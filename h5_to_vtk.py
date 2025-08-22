@@ -402,6 +402,70 @@ class PostproGUI:
                                    f"{len(failed_tasks_messages)} out of {len(tasks)} tasks failed.\n\n"
                                    f"Error details:\n{error_details}")
 
+    # global tally 추출해서 csv로 변환
+    def _export_global_tallies(self):
+        if not hasattr(self, 'statepoint_paths') or not self.statepoint_paths or not self.tally_listbox.curselection():
+            return messagebox.showerror("Error", "Please select Statepoint file(s) and at least one Tally.")
+
+        # score combobox에서 목록 가져오기
+        selected_score_option = self.selected_score.get()
+        if not selected_score_option:
+            return messagebox.showerror("Error", "Please select a Score option from the dropdown to export.")
+
+        output_path = filedialog.asksaveasfilename(
+            title="Save Global Tally Results As...",
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv")]
+        )
+        if not output_path: return None
+
+        all_results = []
+        selected_indices = self.tally_listbox.curselection()
+        print("\n--- Exporting Global Tallies ---")
+
+        for sp_path in self.statepoint_paths: # 선택한 모든 statepoint 파일에 대해서
+            try:
+                with openmc.StatePoint(sp_path) as sp:
+                    for index in selected_indices:
+                        tally_id_str = self.tally_listbox.get(index)
+                        tally_id = int(tally_id_str.split(':')[0])
+                        tally = sp.get_tally(id=tally_id)
+
+                        # MeshFilter가 있는지 확인
+                        has_mesh_filter = any(isinstance(f, openmc.MeshFilter) for f in tally.filters)
+
+                        # MeshFilter가 없는 global tally만 변환
+                        if not has_mesh_filter:
+                            print(f"  - Processing global tally ID {tally_id} in {os.path.basename(sp_path)}")
+                            df = tally.get_pandas_dataframe()
+
+                            # MultiIndex 처리를 위한 score_key 결정
+                            score_key = ('score', '') if isinstance(df.columns, pd.MultiIndex) else 'score'
+                            df_to_append = pd.DataFrame()
+
+                            # '-- ALL SCORES --'를 선택하면 모든 score 추출
+                            if selected_score_option == '-- ALL SCORES --':
+                                df_to_append = df.copy()
+                            else:
+                                # 사용자가 선택한 score로 데이터 필터링
+                                if selected_score_option in df[score_key].unique():
+                                    df_to_append = df[df[score_key] == selected_score_option].copy()
+
+                            if not df_to_append.empty:
+                                df_to_append['source_file'] = os.path.basename(sp_path)
+                                df_to_append['tally_id'] = tally.id
+                                df_to_append['tally_name'] = tally.name
+                                all_results.append(df_to_append)
+            except Exception as e:
+                return messagebox.showerror("Error", f"An error occurred while processing {os.path.basename(sp_path)}:\n{e}")
+
+        if not all_results:
+            return messagebox.showwarning("No Data", "No global (non-mesh) tally data was found for the selected criteria.")
+
+        final_df = pd.concat(all_results, ignore_index=True)
+        final_df.to_csv(output_path, index=False)
+        messagebox.showinfo("Success", f"Global tally results successfully saved to:\n{output_path}")
+        print(f"Global tally results saved to {output_path}")
 
 if __name__ == '__main__':
     if platform.system() == "Windows":
