@@ -101,9 +101,22 @@ def conversion_worker(args):
         else:
             datasets_to_export['relative error'] = relative_error_data
 
+        # statepoint 파일 이름 가져오기
+        base_filename = os.path.basename(sp_path)
 
-        base_filename_no_ext = os.path.splitext(os.path.basename(sp_path))[0]
-        output_filename = os.path.join(output_dir, f"{base_filename_no_ext}_tally_{tally_id}_{score_to_plot}_{norm_suffix}.vtk")
+        # '.'을 기준으로 분리해서 INDEX_# 추출 (statepoint.INDEX_#.h5)
+        try:
+            index_part = base_filename.split('.')[1]
+        except IndexError:
+            index_part = os.path.splitext(base_filename)[0] # 규칙과 다른 파일이면 예외 처리
+
+        # tally 목록에서 이름 가져오기
+        tally_name = tally.name
+
+        # tally 이름에 있는 local_ 삭제 (local_heating_breeder -> heating_breeder)
+        trimmed_tally_name = tally_name.replace('local_', '', 1).replace(' ', '_')
+
+        output_filename = os.path.join(output_dir, f"{index_part}_{trimmed_tally_name}_{norm_suffix}.vtk")
 
         # 사용한 mesh의 크기가 사용자마다 다를 수 있으니 vtk로 내보낼 때 tally를 격자 부피로 정규화
         mesh.write_data_to_vtk(filename=output_filename,
