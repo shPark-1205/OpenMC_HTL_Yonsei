@@ -20,8 +20,8 @@ def create_unit_geometry_source_points(n_points, z_coord, characteristic_length)
 
     # 해석 형상을 충분히 감싸는 큰 사각형 생성
     z = z_coord
-    abs_x_max = s * (np.sqrt(3.0) / 2.0)
-    abs_y_max = s
+    abs_x_max = s
+    abs_y_max = s * (np.sqrt(3.0) / 2.0)
 
     print(f"\nGenerating {n_points} source points on a unit cross-section at z={z_coord}...")
 
@@ -31,8 +31,8 @@ def create_unit_geometry_source_points(n_points, z_coord, characteristic_length)
         x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
-        is_inside = (abs(-x + (y * np.sqrt(3.0))) <= np.sqrt(3.0) * s) and \
-                    (abs(x + (y * np.sqrt(3.0))) <= np.sqrt(3.0) * s)
+        is_inside = (abs(-(x * np.sqrt(3.0)) + y) <= np.sqrt(3.0) * s) and \
+                    (abs((x * np.sqrt(3.0)) + y) <= np.sqrt(3.0) * s)
 
         if is_inside:
             points.append((x, y, z))
@@ -229,21 +229,22 @@ class NuclearFusion:
             Be12Ti_inner_mat.set_density('g/cm3', 2.27)
             Be12Ti_inner_mat.temperature = self.config['materials']['multiplier']['temperature']
 
+            print(f"\nCloning material: Be12Ti...")
+            Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
+            Be12Ti_outer_mat.id = 502
+            Be12Ti_outer_mat.name = 'Be12Ti_outer'
+
             # 베릴륨은 감속재로 작용하기 때문에 thermal scattering data 설정해야 함.
             # FENDL 라이브러리에는 thermal scattering data가 없기 때문에 예외 처리
             if 'fendl' not in self.cross_section_path.lower():
                 print(" -> Adding thermal scattering data for Be12Ti...")
                 Be12Ti_inner_mat.add_s_alpha_beta('c_Be')  # cross_sections.xml 파일에 이름 있음.
+                Be12Ti_outer_mat.add_s_alpha_beta('c_Be')
             else:
                 print(" -> FENDL library detected. Skipping thermal scattering data addition.")
 
             self.materials['Be12Ti_inner'] = Be12Ti_inner_mat
             openmc_materials_list.append(Be12Ti_inner_mat)
-
-            print(f"\nCloning material: Be12Ti...")
-            Be12Ti_outer_mat = Be12Ti_inner_mat.clone()
-            Be12Ti_outer_mat.id = 502
-            Be12Ti_outer_mat.name = 'Be12Ti_outer'
             self.materials['Be12Ti_outer'] = Be12Ti_outer_mat
             openmc_materials_list.append(Be12Ti_outer_mat)
 
@@ -318,7 +319,7 @@ class NuclearFusion:
         hex_prism = openmc.model.HexagonalPrism(
             edge_length=(self.config['geometry']['characteristic_length']),
             origin=(0.0, 0.0),
-            orientation='y',
+            orientation='x',
             boundary_type='periodic'
         )
 
@@ -566,6 +567,7 @@ class NuclearFusion:
             breeder_filter = openmc.MaterialFilter([breeder_object], filter_id=21)
             be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object], filter_id=31)
             be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object], filter_id=32)
+            be12ti_filter = openmc.MaterialFilter([be12ti_inner_object, be12ti_outer_object], filter_id=33)
             eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object], filter_id=41)
             tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=51)
 
@@ -596,7 +598,7 @@ class NuclearFusion:
             tally_multiplying = openmc.Tally(name='multiplication', tally_id=99)
             tally_multiplying.scores = ['(n,2n)']
             tally_multiplying.nuclides = ['Be9']
-            tally_multiplying.filters = [be12ti_outer_filter]
+            tally_multiplying.filters = [be12ti_filter]
             self.tallies.append(tally_multiplying)
 
             tally_global_structure = openmc.Tally(name='global_structure', tally_id=94)
@@ -611,7 +613,7 @@ class NuclearFusion:
 
             tally_global_multiplier = openmc.Tally(name='global_multiplier', tally_id=96)
             tally_global_multiplier.scores = ['flux', 'absorption', 'elastic']
-            tally_global_multiplier.filters = [be12ti_outer_filter, neutron_filter, energy_filter]
+            tally_global_multiplier.filters = [be12ti_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_global_multiplier)
 
             tally_global_breeder = openmc.Tally(name='global_breeder', tally_id=97)
@@ -683,7 +685,7 @@ class NuclearFusion:
 
             tally_local_heating_multiplier = openmc.Tally(name='local_heating_multiplier', tally_id=102)
             tally_local_heating_multiplier.scores = ['heating']
-            tally_local_heating_multiplier.filters = [mesh_cylindrical_filter, be12ti_outer_filter, particle_filter]
+            tally_local_heating_multiplier.filters = [mesh_cylindrical_filter, be12ti_filter, particle_filter]
 
             tally_local_heating_structure = openmc.Tally(name='local_heating_structure', tally_id=103)
             tally_local_heating_structure.scores = ['heating']

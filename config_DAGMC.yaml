@@ -37,13 +37,13 @@ geometry:
   tokamak_major_radius: 906.0
   tokamak_minor_radius: 292.258
   # Edge length of triagle or hexagon depending on your geometry unit cell
-  characteristic_length: 7.2168783648703220563643597562745
-  h5m_path: '/opt/geometries/20250815_EU_DEMO_HCPB_LP_WIDE_CELL_ZAxis_Channel.h5m'
+  characteristic_length: 7.333
+  h5m_path: '/opt/geometries/20250825_EU_DEMO_HCPB_HP_WIDE_CELL_ZAxis_Channel.h5m'
 
 
 # DAGMC 형상 감싸는 박스
 bounding:
-  z_max: 1244.458
+  z_max: 1250.158
   z_min: 898.0
 #  z_height: 100.0
 #  y_width: 100.0
@@ -69,14 +69,14 @@ mesh:
 # 전체 형상을 감싸는 cylindrical mesh 설정
 mesh_cylindrical:
   r_min: 0.0
-  r_max: 6.6
-  division_r: 67 # 0.1 cm 격자
-  z_min: 1198.258
-  z_max: 1244.458
-  division_z: 463 # 0.1 cm 격자
+  r_max: 7.3
+  division_r: 147 # 0.1 cm 격자
+  z_min: 1198.058
+  z_max: 1250.158
+  division_z: 522 # 0.1 cm 격자
   phi_min: 0.523599 # 30 deg
   phi_max: 1.5708 # 90 deg
-  division_phi: 6 # 10 deg 격자
+  division_phi: 2 # 10 deg 격자
 
 # Breeder만 감싸는 coarse mesh 설정
 mesh_breeder:
