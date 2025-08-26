@@ -685,8 +685,8 @@ class NuclearFusion:
                                                       origin=(0.0, 0.0, 0.0))
             mesh_cyl_brd_mtp_filter = openmc.MeshFilter(mesh_cyl_brd_mtp, filter_id=101)
 
-            mesh_cyl_outer_mtp_config = self.config['mesh_outer_mtp']
-            mesh_cyl_outer_mtp = openmc.CylindricalMesh(name='outer_mtp_mesh',
+            mesh_cyl_outer_mtp_config = self.config['mesh_cyl_outer_mtp']
+            mesh_cyl_outer_mtp = openmc.CylindricalMesh(name='cyl_outer_mtp_mesh',
                                                     r_grid=np.linspace(
                                                         mesh_cyl_outer_mtp_config['r_min'],
                                                         mesh_cyl_outer_mtp_config['r_max'],
