@@ -763,14 +763,14 @@ class NuclearFusion:
             plot_xy.color_by = 'material'
             plot_xy.colors = material_colors
 
-            # plot_yz = openmc.Plot()
-            # plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
-            # plot_yz.width = (30.0, 60.0)
-            # plot_yz.pixels = (1200, 2400)
-            # plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
-            # plot_yz.basis = 'yz'
-            # plot_yz.color_by = 'material'
-            # plot_yz.colors = material_colors
+            plot_yz = openmc.Plot()
+            plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
+            plot_yz.width = (15.0, 60.0)
+            plot_yz.pixels = (1500, 6000)
+            plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            plot_yz.basis = 'yz'
+            plot_yz.color_by = 'material'
+            plot_yz.colors = material_colors
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
@@ -782,7 +782,7 @@ class NuclearFusion:
             plot_zx.colors = material_colors
 
             # 플롯 생성
-            plots = openmc.Plots([plot_xy, plot_zx])
+            plots = openmc.Plots([plot_xy, plot_yz, plot_zx])
             plots.export_to_xml()  # plots.xml 생성
 
             # geometry.xml과 materials.xml이 이미 생성된 상태여야 함
