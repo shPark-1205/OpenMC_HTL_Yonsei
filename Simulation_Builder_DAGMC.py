@@ -659,37 +659,61 @@ class NuclearFusion:
             """
 
             # 해석 형상을 감싸는 cylindrical mesh 생성
-            mesh_cylindrical_config = self.config['mesh_cylindrical']
-
-            mesh_cylindrical = openmc.CylindricalMesh(name='cylindrical_mesh',
+            mesh_cyl_tube_config = self.config['mesh_cyl_tube']
+            mesh_cyl_tube = openmc.CylindricalMesh(name='cyl_tube_mesh',
                                                       r_grid=np.linspace(
-                                                          mesh_cylindrical_config['r_min'],
-                                                          mesh_cylindrical_config['r_max'],
-                                                          mesh_cylindrical_config['division_r']),
-                                                      phi_grid=np.linspace(
-                                                          mesh_cylindrical_config['phi_min'],
-                                                          mesh_cylindrical_config['phi_max'],
-                                                          mesh_cylindrical_config['division_phi']),
+                                                          mesh_cyl_tube_config['r_min'],
+                                                          mesh_cyl_tube_config['r_max'],
+                                                          mesh_cyl_tube_config['division_r']),
                                                       z_grid=np.linspace(
-                                                          mesh_cylindrical_config['z_min'],
-                                                          mesh_cylindrical_config['z_max'],
-                                                          mesh_cylindrical_config['division_z']),
+                                                          mesh_cyl_tube_config['z_min'],
+                                                          mesh_cyl_tube_config['z_max'],
+                                                          mesh_cyl_tube_config['division_z']),
                                                       origin=(0.0, 0.0, 0.0))
+            mesh_cyl_tube_filter = openmc.MeshFilter(mesh_cyl_tube, filter_id=100)
 
-            mesh_cylindrical_filter = openmc.MeshFilter(mesh_cylindrical, filter_id=100)
+            mesh_cyl_brd_mtp_config = self.config['mesh_cyl_brd_mtp']
+            mesh_cyl_brd_mtp = openmc.CylindricalMesh(name='cyl_brd_mtp_mesh',
+                                                      r_grid=np.linspace(
+                                                          mesh_cyl_brd_mtp_config['r_min'],
+                                                          mesh_cyl_brd_mtp_config['r_max'],
+                                                          mesh_cyl_brd_mtp_config['division_r']),
+                                                      z_grid=np.linspace(
+                                                          mesh_cyl_brd_mtp_config['z_min'],
+                                                          mesh_cyl_brd_mtp_config['z_max'],
+                                                          mesh_cyl_brd_mtp_config['division_z']),
+                                                      origin=(0.0, 0.0, 0.0))
+            mesh_cyl_brd_mtp_filter = openmc.MeshFilter(mesh_cyl_brd_mtp, filter_id=101)
+
+            mesh_cyl_outer_mtp_config = self.config['mesh_outer_mtp']
+            mesh_cyl_outer_mtp = openmc.CylindricalMesh(name='outer_mtp_mesh',
+                                                    r_grid=np.linspace(
+                                                        mesh_cyl_outer_mtp_config['r_min'],
+                                                        mesh_cyl_outer_mtp_config['r_max'],
+                                                        mesh_cyl_outer_mtp_config['division_r']),
+                                                    z_grid=np.linspace(
+                                                        mesh_cyl_outer_mtp_config['z_min'],
+                                                        mesh_cyl_outer_mtp_config['z_max'],
+                                                        mesh_cyl_outer_mtp_config['division_z']),
+                                                    origin=(0.0, 0.0, 0.0))
+            mesh_cyl_outer_mtp_filter = openmc.MeshFilter(mesh_cyl_outer_mtp, filter_id=102)
 
 
             tally_local_heating_breeder = openmc.Tally(name='local_heating_breeder', tally_id=101)
             tally_local_heating_breeder.scores = ['heating']
-            tally_local_heating_breeder.filters = [mesh_cylindrical_filter, breeder_filter, particle_filter]
+            tally_local_heating_breeder.filters = [mesh_cyl_brd_mtp_filter, breeder_filter, particle_filter]
 
-            tally_local_heating_multiplier = openmc.Tally(name='local_heating_multiplier', tally_id=102)
-            tally_local_heating_multiplier.scores = ['heating']
-            tally_local_heating_multiplier.filters = [mesh_cylindrical_filter, be12ti_filter, particle_filter]
+            tally_local_heating_inner_multiplier = openmc.Tally(name='local_heating_inner_multiplier', tally_id=102)
+            tally_local_heating_inner_multiplier.scores = ['heating']
+            tally_local_heating_inner_multiplier.filters = [mesh_cyl_brd_mtp_filter, be12ti_filter, particle_filter]
 
             tally_local_heating_structure = openmc.Tally(name='local_heating_structure', tally_id=103)
             tally_local_heating_structure.scores = ['heating']
-            tally_local_heating_structure.filters = [mesh_cylindrical_filter, eurofer_filter, particle_filter]
+            tally_local_heating_structure.filters = [mesh_cyl_tube_filter, eurofer_filter, particle_filter]
+
+            tally_local_heating_outer_multiplier = openmc.Tally(name='local_heating_outer_multiplier', tally_id=104)
+            tally_local_heating_outer_multiplier.scores = ['heating']
+            tally_local_heating_inner_multiplier.filters = [mesh_cyl_outer_mtp_filter, be12ti_filter, particle_filter]
 
 
             # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
@@ -714,9 +738,10 @@ class NuclearFusion:
 
             local_tallies_list = [
                 tally_local_heating_breeder,
-                tally_local_heating_multiplier,
+                tally_local_heating_inner_multiplier,
                 tally_local_heating_structure,
-                tally_current_multiplier,
+                tally_local_heating_outer_multiplier,
+                # tally_current_multiplier,
             ]
 
             self.tallies.extend(local_tallies_list)

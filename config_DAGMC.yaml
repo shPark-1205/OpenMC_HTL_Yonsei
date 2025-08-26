@@ -56,16 +56,6 @@ bounding:
   z_coord: 1221.0
 
 
-# 후처리용 격자 설정 [cm or 개]
-mesh:
-  length_x: 5.4 # y 방향 길이 (160 mm)
-  length_z: 46.2 # First wall부터의 z 방향 길이 (462 mm)
-  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  y_thickness: 0.01 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 540 # z 방향 격자 개수
-  division_y: 1 # y 방향 격자 개수
-  division_z: 4620 # x 방향 격자 개수
-
 # 전체 형상을 감싸는 cylindrical mesh 설정
 mesh_cylindrical:
   r_min: 0.0
@@ -78,17 +68,32 @@ mesh_cylindrical:
   phi_max: 1.5708 # 90 deg
   division_phi: 2 # 10 deg 격자
 
-# Breeder만 감싸는 coarse mesh 설정
-mesh_breeder:
-  x_min: -3.0
-  x_max: 3.0
-  z_min: 1202.158
-  z_max: 1244.458
-  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  y_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 60 # z 방향 격자 개수
-  division_y: 1 # y 방향 격자 개수
-  division_z: 423 # x 방향 격자 개수
+# HP 모델 Pressure tube 격자
+mesh_cyl_tube:
+  r_min: 4.6
+  r_max: 5.0
+  division_r: 5 # 0.1 cm 격자
+  z_min: 1200.458
+  z_max: 1250.158
+  division_z: 498 # 0.1 cm 격자
+
+# HP 모델 Breeder, Inner Multiplier 격자
+mesh_cyl_brd_mtp:
+  r_min: 0.7
+  r_max: 4.3
+  division_r: 37 # 0.1 cm 격자
+  z_min: 1201.758
+  z_max: 1244.358
+  division_z: 427 # 0.1 cm 격자
+
+# HP 모델 Outer Multiplier 격자
+mesh_cyl_outer_mtp:
+  r_min: 5.1
+  r_max: 7.3
+  division_r: 23 # 0.1 cm 격자
+  z_min: 1200.958
+  z_max: 1231.958
+  division_z: 311 # 0.1 cm 격자
 
 # Multiplier만 감싸는 coarse mesh 설정
 mesh_outer_multiplier:
