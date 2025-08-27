@@ -685,17 +685,10 @@ class NuclearFusion:
                                                       origin=(0.0, 0.0, 0.0))
             mesh_cyl_brd_mtp_filter = openmc.MeshFilter(mesh_cyl_brd_mtp, filter_id=101)
 
-            mesh_cyl_outer_mtp_config = self.config['mesh_cyl_outer_mtp']
-            mesh_cyl_outer_mtp = openmc.CylindricalMesh(name='cyl_outer_mtp_mesh',
-                                                    r_grid=np.linspace(
-                                                        mesh_cyl_outer_mtp_config['r_min'],
-                                                        mesh_cyl_outer_mtp_config['r_max'],
-                                                        mesh_cyl_outer_mtp_config['division_r']),
-                                                    z_grid=np.linspace(
-                                                        mesh_cyl_outer_mtp_config['z_min'],
-                                                        mesh_cyl_outer_mtp_config['z_max'],
-                                                        mesh_cyl_outer_mtp_config['division_z']),
-                                                    origin=(0.0, 0.0, 0.0))
+            mesh_cyl_outer_mtp = openmc.UnstructuredMesh(name='unstructured_outer_mtp_mesh',
+                                                filename='/opt/meshes/unstructured_outer_mtp.e',
+                                                library='libmesh'
+                                                )
             mesh_cyl_outer_mtp_filter = openmc.MeshFilter(mesh_cyl_outer_mtp, filter_id=102)
 
 
@@ -719,6 +712,18 @@ class NuclearFusion:
             tally_local_flux_breeder.scores = ['flux']
             tally_local_flux_breeder.filters = [mesh_cyl_brd_mtp_filter, breeder_filter, neutron_filter]
 
+            tally_local_flux_inner_multiplier = openmc.Tally(name='local_flux_inner_multiplier', tally_id=202)
+            tally_local_flux_inner_multiplier.scores = ['flux']
+            tally_local_flux_inner_multiplier.filters = [mesh_cyl_brd_mtp_filter, be12ti_filter, neutron_filter]
+
+            tally_local_flux_structure = openmc.Tally(name='local_flux_structure', tally_id=203)
+            tally_local_flux_structure.scores = ['flux']
+            tally_local_flux_structure.filters = [mesh_cyl_tube_filter, eurofer_filter, neutron_filter]
+
+            tally_local_flux_outer_multiplier = openmc.Tally(name='local_flux_outer_multiplier', tally_id=204)
+            tally_local_flux_outer_multiplier.scores = ['flux']
+            tally_local_flux_outer_multiplier.filters = [mesh_cyl_outer_mtp_filter, be12ti_filter, neutron_filter]
+            tally_local_flux_outer_multiplier.estimator = 'collision' # libmesh는 collision estimator만 지원
 
             # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
             mesh_outer_multiplier_config = self.config['mesh_outer_multiplier']
@@ -745,6 +750,10 @@ class NuclearFusion:
                 tally_local_heating_inner_multiplier,
                 tally_local_heating_structure,
                 tally_local_heating_outer_multiplier,
+                tally_local_flux_breeder,
+                tally_local_flux_inner_multiplier,
+                tally_local_flux_structure,
+                tally_local_flux_outer_multiplier,
                 # tally_current_multiplier,
             ]
 
