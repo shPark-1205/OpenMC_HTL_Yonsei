@@ -280,42 +280,37 @@ class PostproGUI:
             self.tally_types = {}
             tally_info = []
 
+            # statepoint 파일에 있는 모든 tally에 대해 반복 수행
             for t in self.sp_object.tallies.values():
                 tally_info.append(f"{t.id}: {t.name}")
 
-                # MeshFilter가 있는지 확인
-                has_mesh_filter = any(isinstance(f, openmc.MeshFilter) for f in t.filters)
+                # MeshFilter가 있는지 확인하는 용도
+                mesh_filter_found = None
 
-                if has_mesh_filter:
-                    mesh_filter = t.find_filter(openmc.MeshFilter)
-                    # MeshFilter가 있으면 mesh 객체 타입 확인
-                    if isinstance(mesh_filter.mesh, openmc.UnstructuredMesh):
+                # filters 목록을 순회하며 MeshFilter 찾기
+                for f in t.filters:
+                    if isinstance(f, openmc.MeshFilter): # MeshFilter와 그 하위 filter까지 모두 찾기
+                        mesh_filter_found = f
+                        break # 하나라도 찾으면 종료
+
+                if mesh_filter_found: # MeshFilter가 있을 때
+                    if isinstance(mesh_filter_found.mesh, openmc.UnstructuredMesh): # UnstructuredMesh
                         self.tally_types[t.id] = 'unstructured'
-                    else: # Regular, Cylindrical mesh 등
+                    else: # 나머지 mesh는 OpenMC 내장 structured mesh
                         self.tally_types[t.id] = 'structured'
-                else: # MeshFilter가 없으면
+                else: # MeshFilter가 없을 때
                     self.tally_types[t.id] = 'global'
 
                 # MultiIndex 여부 확인
                 try:
-                    # UnstructuredMesh Tally는 DataFrame 변환이 오래 걸릴 수 있으므로
-                    # structured 또는 global일 때만 미리 확인
+                    # UnstructuredMesh Tally는 DataFrame 변환이 오래 걸릴 수 있으므로 structured 또는 global일 때만 미리 확인
                     if self.tally_types[t.id] != 'unstructured':
-                        df_temp = t.get_pandas_dataframe()
+                        df_temp = t.get_pandas_dataframe() # pandas dataframe으로 변환
                         self.is_multi_index_map[t.id] = isinstance(df_temp.columns, pd.MultiIndex)
                     else:
                         self.is_multi_index_map[t.id] = False
-                except Exception:
+                except Exception: # 변환하지 않는 모든 tally에 대해 경고가 아닌 False로 설정
                     self.is_multi_index_map[t.id] = False
-
-            # # Tally ID별 MultiIndex 여부를 미리 저장
-            # self.is_multi_index_map.clear()
-            # for t in self.sp_object.tallies.values():
-            #     df_temp = t.get_pandas_dataframe()
-            #     self.is_multi_index_map[t.id] = isinstance(df_temp.columns, pd.MultiIndex)
-            #
-            # # 사용자에게 알려주기 위해 tally ID와 이름 표시
-            # tally_info = [f"{t.id}: {t.name}" for t in self.sp_object.tallies.values()]
 
             self.tally_listbox.delete(0, tk.END)
             if not tally_info:
