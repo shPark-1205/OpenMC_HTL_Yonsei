@@ -626,35 +626,31 @@ class NuclearFusion:
             # CylindricalMesh는 현재 z축만 회전 축으로 지원
             # 3D mesh로 데이터를 뽑고 싶으면 CylindricalMesh 사용하면 될 듯
 
-            """
-            # OpenMC의 정렬격자 사용
-            mesh = openmc.RegularMesh(name='focused_mesh')
-
-            mesh_config = self.config['mesh']
+            # OpenMC의 정렬격자 사용 (축 방향 분포만 보고싶은 tally에 사용)
+            mesh = openmc.RegularMesh(name='z_aligned_mesh')
 
             mesh_z_min = self.tokamak_radius  # OB FW 위치부터
-            mesh_z_max = self.tokamak_radius + mesh_config['length_z'] # OB Pin 맨 끝까지
+            mesh_z_max = self.config['bounding']['z_max'] # OB Pin 맨 끝까지
 
-            # 2D or 3D mesh 설정해야 함.
-            # 지금은 yz 평면의 pseudo-2D mesh
-            mesh_y_center = mesh_config['y_center']
-            mesh_y_thickness = mesh_config['y_thickness']
+            # x, y 방향으로는 해석 형상을 감싸는 정사각형
+            mesh_y_min = -self.config['geometry']['characteristic_length']
+            mesh_y_max = self.config['geometry']['characteristic_length']
 
-            mesh_y_min = mesh_y_center - (mesh_y_thickness / 2.0)
-            mesh_y_max = mesh_y_center + (mesh_y_thickness / 2.0)
-
-            mesh_x_min = 0.0
-            mesh_x_max = mesh_config['length_x']
+            mesh_x_min = -self.config['geometry']['characteristic_length']
+            mesh_x_max = self.config['geometry']['characteristic_length']
 
             # 두 꼭짓점 사이만 격자를 생성
             mesh.lower_left = (mesh_x_min, mesh_y_min, mesh_z_min)  # lower_left 꼭짓점
             mesh.upper_right = (mesh_x_max, mesh_y_max, mesh_z_max)  # upper_right 꼭짓점
 
+            division_x = self.config['mesh']['division_x']
+            division_y = self.config['mesh']['division_y']
+            division_z = self.config['mesh']['division_z']
+
             # 격자를 몇개로 나누지? (x, y, z)
-            mesh.dimension = (mesh_config['division_x'], mesh_config['division_y'], mesh_config['division_z'])
+            mesh.dimension = (division_x, division_y, division_z) # x, y 방향으로는 평균내도록 1개 격자만 생성
 
             mesh_filter = openmc.MeshFilter(mesh, filter_id=99)
-            """
 
             # 해석 형상을 감싸는 cylindrical mesh 생성
             mesh_cylindrical_config = self.config['mesh_cylindrical']
@@ -664,10 +660,10 @@ class NuclearFusion:
                                                           mesh_cylindrical_config['r_min'],
                                                           mesh_cylindrical_config['r_max'],
                                                           mesh_cylindrical_config['division_r']),
-                                                      phi_grid=np.linspace(
-                                                          mesh_cylindrical_config['phi_min'],
-                                                          mesh_cylindrical_config['phi_max'],
-                                                          mesh_cylindrical_config['division_phi']),
+                                                      # phi_grid=np.linspace(
+                                                      #     mesh_cylindrical_config['phi_min'],
+                                                      #     mesh_cylindrical_config['phi_max'],
+                                                      #     mesh_cylindrical_config['division_phi']),
                                                       z_grid=np.linspace(
                                                           mesh_cylindrical_config['z_min'],
                                                           mesh_cylindrical_config['z_max'],
@@ -688,6 +684,18 @@ class NuclearFusion:
             tally_local_heating_structure = openmc.Tally(name='local_heating_structure', tally_id=103)
             tally_local_heating_structure.scores = ['heating']
             tally_local_heating_structure.filters = [mesh_cylindrical_filter, eurofer_filter, particle_filter]
+
+            tally_local_flux_breeder = openmc.Tally(name='local_flux_breeder', tally_id=201)
+            tally_local_flux_breeder.scores = ['flux']
+            tally_local_flux_breeder.filters = [mesh_filter, breeder_filter, neutron_filter]
+
+            tally_local_flux_multiplier = openmc.Tally(name='local_flux_multiplier', tally_id=202)
+            tally_local_flux_multiplier.scores = ['flux']
+            tally_local_flux_multiplier.filters = [mesh_filter, be12ti_outer_filter, neutron_filter]
+
+            tally_local_flux_structure = openmc.Tally(name='local_flux_structure', tally_id=203)
+            tally_local_flux_structure.scores = ['flux']
+            tally_local_flux_structure.filters = [mesh_filter, eurofer_filter, neutron_filter]
 
 
             # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
@@ -714,7 +722,10 @@ class NuclearFusion:
                 tally_local_heating_breeder,
                 tally_local_heating_multiplier,
                 tally_local_heating_structure,
-                tally_current_multiplier,
+                tally_local_flux_breeder,
+                tally_local_flux_multiplier,
+                tally_local_flux_structure,
+                # tally_current_multiplier,
             ]
 
             self.tallies.extend(local_tallies_list)
