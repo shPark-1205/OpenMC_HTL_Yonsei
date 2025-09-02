@@ -572,9 +572,9 @@ class NuclearFusion:
             tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=51)
 
             # Energy filter
-            # energy_bins = np.logspace(-2, 7.3, 501)  # 0.01 eV ~ 20 MeV 범위를 500개로 쪼개기
-            # energy_filter = openmc.EnergyFilter(energy_bins, filter_id=61)
-            energy_filter = openmc.EnergyFilter.from_group_structure('UKAEA-1102') # 미리 정의된 에너지 bin 사용
+            energy_bins = np.logspace(-3, 7.18, 1001)  # 0.001 eV ~ 15.1 MeV 범위를 1000개로 쪼개기
+            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=61)
+            # energy_filter = openmc.EnergyFilter.from_group_structure('UKAEA-1102') # 미리 정의된 에너지 bin 사용
 
             # Particle filter
             neutron_filter = openmc.ParticleFilter(['neutron'], filter_id=71)
