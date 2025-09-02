@@ -45,8 +45,6 @@ geometry:
 bounding:
   z_max: 1244.457
   z_min: 905.0
-#  z_height: 100.0
-#  y_width: 100.0
 
 
 # 형상 2D plot용 좌표
@@ -58,13 +56,9 @@ bounding:
 
 # 후처리용 격자 설정 [cm or 개]
 mesh:
-  length_x: 5.4 # y 방향 길이 (160 mm)
-  length_z: 46.2 # First wall부터의 z 방향 길이 (462 mm)
-  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  y_thickness: 0.01 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 540 # z 방향 격자 개수
+  division_x: 1 # x 방향 격자 개수
   division_y: 1 # y 방향 격자 개수
-  division_z: 4620 # x 방향 격자 개수
+  division_z: 4620 # z 방향 격자 개수
 
 # 전체 형상을 감싸는 cylindrical mesh 설정
 mesh_cylindrical:
@@ -77,18 +71,6 @@ mesh_cylindrical:
   phi_min: 0.523599 # 30 deg
   phi_max: 1.5708 # 90 deg
   division_phi: 6 # 10 deg 격자
-
-# Breeder만 감싸는 coarse mesh 설정
-mesh_breeder:
-  x_min: -3.0
-  x_max: 3.0
-  z_min: 1202.158
-  z_max: 1244.458
-  y_center: 0.0 # 2D mesh를 사용할 경우 xy 평면의 z 좌표
-  y_thickness: 0.1 # 2D mesh인 경우 z 축 방향 격자 두께
-  division_x: 60 # z 방향 격자 개수
-  division_y: 1 # y 방향 격자 개수
-  division_z: 423 # x 방향 격자 개수
 
 # Multiplier만 감싸는 coarse mesh 설정
 mesh_outer_multiplier:
