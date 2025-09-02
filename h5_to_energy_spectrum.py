@@ -214,7 +214,7 @@ class SpectrumPlotterApp:
                         energy_bins = df_grouped['energy low [eV]']
                         raw_values = df_grouped['mean']
 
-                        if selected_score == 'flux':
+                        if selected_score == 'flux' or 'heating':
                             normalized_values = raw_values * source_rate / volume
                         else:
                             normalized_values = raw_values * source_rate
@@ -226,7 +226,7 @@ class SpectrumPlotterApp:
                         # CSV 저장을 위해 데이터 수집
                         if 'Energy_low [eV]' not in combined_data_for_csv:
                             combined_data_for_csv['Energy_low [eV]'] = energy_bins
-                        col_name = f"Flux_{filename}_{tally_name.replace(' ', '_')}"
+                        col_name = f"{tally_name}_{filename}_{tally_name.replace(' ', '_')}"
                         combined_data_for_csv[col_name] = normalized_values
                 except Exception as e:
                     print(f"Warning: Could not process Tally ID {tally_id} in file {filename}: {e}")
@@ -242,9 +242,11 @@ class SpectrumPlotterApp:
             self.current_plot_data = None
 
         if selected_score == 'flux':
-            y_label = 'Flux [particles/cm$^2$/s]'
+            y_label = 'Flux [particles/cm$^2$/sec]'
+        elif selected_score == 'heating':
+            y_label = 'Heating [W/cm$^3$]'
         else:
-            y_label = f'{selected_score.capitalize()} Rate [reactions/s]'
+            y_label = f'{selected_score.capitalize()} Rate [reactions/sec]'
 
         self.ax.legend(fontsize='small')
         self.ax.set_xscale(self.x_scale_var.get())
