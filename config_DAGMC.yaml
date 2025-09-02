@@ -43,8 +43,8 @@ geometry:
 
 # DAGMC 형상 감싸는 박스
 bounding:
-  z_max: 1244.458
-  z_min: 898.0
+  z_max: 1244.457
+  z_min: 905.0
 #  z_height: 100.0
 #  y_width: 100.0
 
