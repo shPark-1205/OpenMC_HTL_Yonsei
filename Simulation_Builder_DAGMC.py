@@ -600,22 +600,22 @@ class NuclearFusion:
             self.tallies.append(tally_multiplying)
 
             tally_global_structure = openmc.Tally(name='global_structure', tally_id=94)
-            tally_global_structure.scores = ['flux', 'absorption', 'elastic']
+            tally_global_structure.scores = ['flux', 'absorption', 'elastic', 'heating']
             tally_global_structure.filters = [eurofer_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_global_structure)
 
             tally_global_armor = openmc.Tally(name='global_armor', tally_id=95)
-            tally_global_armor.scores = ['flux', 'absorption', 'elastic']
+            tally_global_armor.scores = ['flux', 'absorption', 'elastic', 'heating']
             tally_global_armor.filters = [tungsten_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_global_armor)
 
             tally_global_multiplier = openmc.Tally(name='global_multiplier', tally_id=96)
-            tally_global_multiplier.scores = ['flux', 'absorption', 'elastic']
+            tally_global_multiplier.scores = ['flux', 'absorption', 'elastic', 'heating', '(n,2n)']
             tally_global_multiplier.filters = [be12ti_outer_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_global_multiplier)
 
             tally_global_breeder = openmc.Tally(name='global_breeder', tally_id=97)
-            tally_global_breeder.scores = ['flux', 'absorption', 'elastic']
+            tally_global_breeder.scores = ['flux', 'absorption', 'elastic', 'heating', 'H3-production']
             tally_global_breeder.filters = [breeder_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_global_breeder)
 
