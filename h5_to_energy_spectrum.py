@@ -177,21 +177,21 @@ class SpectrumPlotterApp:
         if not selected_indices:
             return messagebox.showwarning("Warning", "Please select a tally to plot.")
 
-        selected_score = self.score_var.get()
-        if not selected_score:
+        self.selected_score = self.score_var.get()
+        if not self.selected_score:
             return messagebox.showwarning("Warning", "Please select a score to plot.")
 
         try:
             source_rate = float(self.source_rate_var.get())
             volume = float(self.volume_var.get())
-            if volume == 0 and selected_score == 'flux':
+            if volume == 0 and self.selected_score == 'flux':
                 raise ValueError("Volume must be non-zero for flux.")
         except ValueError as e:
             return messagebox.showerror("Error", "Invalid input for Source Rate or Cell Volume:\n{e}")
 
         self.ax.clear()
         combined_data_for_csv = {}
-        self.current_save_info = {'tallies': [], 'score': selected_score}
+        self.current_save_info = {'tallies': [], 'score': self.selected_score}
 
         for index in selected_indices:
             selected_text = self.tally_listbox.get(index)
@@ -204,7 +204,7 @@ class SpectrumPlotterApp:
                         tally = sp.get_tally(id=tally_id)
                         df = tally.get_pandas_dataframe()
 
-                        df_filtered = df[df['score'] == selected_score]
+                        df_filtered = df[df['score'] == self.selected_score]
 
                         if 'material' in df.columns:
                             df_grouped = df_filtered.groupby('energy low [eV]')['mean'].sum().reset_index()
@@ -214,7 +214,7 @@ class SpectrumPlotterApp:
                         energy_bins = df_grouped['energy low [eV]']
                         raw_values = df_grouped['mean']
 
-                        if selected_score == 'flux' or 'heating':
+                        if self.selected_score in ['flux', 'heating']:
                             normalized_values = raw_values * source_rate / volume
                         else:
                             normalized_values = raw_values * source_rate
@@ -226,7 +226,7 @@ class SpectrumPlotterApp:
                         # CSV 저장을 위해 데이터 수집
                         if 'Energy_low [eV]' not in combined_data_for_csv:
                             combined_data_for_csv['Energy_low [eV]'] = energy_bins
-                        col_name = f"{tally_name}_{filename}_{tally_name.replace(' ', '_')}"
+                        col_name = f"{self.selected_score}_{filename}_{tally_name.replace(' ', '_')}"
                         combined_data_for_csv[col_name] = normalized_values
                 except Exception as e:
                     print(f"Warning: Could not process Tally ID {tally_id} in file {filename}: {e}")
@@ -241,19 +241,19 @@ class SpectrumPlotterApp:
             self.disable_save_buttons()
             self.current_plot_data = None
 
-        if selected_score == 'flux':
+        if self.selected_score == 'flux':
             y_label = 'Flux [particles/cm$^2$/sec]'
-        elif selected_score == 'heating':
+        elif self.selected_score == 'heating':
             y_label = 'Heating [W/cm$^3$]'
         else:
-            y_label = f'{selected_score.capitalize()} Rate [reactions/sec]'
+            y_label = f'{self.selected_score.capitalize()} Rate [reactions/sec]'
 
         self.ax.legend(fontsize='small')
         self.ax.set_xscale(self.x_scale_var.get())
         self.ax.set_yscale(self.y_scale_var.get())
         self.ax.set_xlabel('Energy [eV]')
         self.ax.set_ylabel(y_label)
-        self.ax.set_title(f'{selected_score.capitalize()} Spectrum Comparison')
+        self.ax.set_title(f'{self.selected_score.capitalize()} Spectrum Comparison')
         self.ax.grid(True, which='both', linestyle='--')
         self.canvas.draw()
 
@@ -303,11 +303,11 @@ class SpectrumPlotterApp:
                 original_basename = os.path.splitext(parts[1])[0]
                 tally_name = parts[2]
 
-                filename = f"{original_basename}_{tally_name}.csv"
+                filename = f"{self.selected_score}_{original_basename}_{tally_name}.csv"
                 full_path = os.path.join(folder_path, filename)
 
                 individual_df = self.current_plot_data[[energy_col, col_name]]
-                individual_df = individual_df.rename(columns={col_name: 'Flux [particles/cm2/s]'})
+                individual_df = individual_df.rename(columns={col_name: f"{self.selected_score}"})
                 individual_df.to_csv(full_path, index=False)
 
             messagebox.showinfo("Success", f"All individual files successfully saved in:\n{folder_path}")
