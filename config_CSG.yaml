@@ -67,14 +67,6 @@ csg_geometry:
     diagonal_angle: 0.2281
 
 
-
-
-# DAGMC 형상 감싸는 박스
-bounding:
-  z_max: 1244.457
-  z_min: 905.0
-
-
 # 형상 2D plot용 좌표
 2D_plot:
   x_coord: 0.0
