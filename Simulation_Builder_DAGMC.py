@@ -366,13 +366,13 @@ class NuclearFusion:
                                               boundary_type='vacuum')
 
         # --- Cylinders ---
-        surfaces['multiplier_inner'] = openmc.ZCylinder(radius=csg_cylinder['multiplier_inner'])
-        surfaces['tube_outer'] = openmc.ZCylinder(radius=csg_cylinder['tube_outer'])
-        surfaces['tube_inner'] = openmc.ZCylinder(radius=csg_cylinder['tube_inner'])
-        surfaces['pin_outer'] = openmc.ZCylinder(radius=csg_cylinder['pin_outer'])
-        surfaces['breeder_outer'] = openmc.ZCylinder(radius=csg_cylinder['breeder_outer'])
-        surfaces['breeder_inner'] = openmc.ZCylinder(radius=csg_cylinder['breeder_inner'])
-        surfaces['pin_inner'] = openmc.ZCylinder(radius=csg_cylinder['pin_inner'])
+        surfaces['multiplier_inner'] = openmc.ZCylinder(r=csg_cylinder['multiplier_inner'])
+        surfaces['tube_outer'] = openmc.ZCylinder(r=csg_cylinder['tube_outer'])
+        surfaces['tube_inner'] = openmc.ZCylinder(r=csg_cylinder['tube_inner'])
+        surfaces['pin_outer'] = openmc.ZCylinder(r=csg_cylinder['pin_outer'])
+        surfaces['breeder_outer'] = openmc.ZCylinder(r=csg_cylinder['breeder_outer'])
+        surfaces['breeder_inner'] = openmc.ZCylinder(r=csg_cylinder['breeder_inner'])
+        surfaces['pin_inner'] = openmc.ZCylinder(r=csg_cylinder['pin_inner'])
 
         # --- Hexagons ---
         surfaces['unit_hexagon'] = openmc.model.HexagonalPrism(
@@ -409,7 +409,7 @@ class NuclearFusion:
                + csg_plane['impinging_to_pin']
                + csg_plane['pin_tip_thickness']
                + csg_plane['cone_axial']
-               - (csg_cylinder['pin_inner'] / np.tan(csg_cone['diagonal_angle'])),
+               - (csg_cylinder['breeder_outer'] / np.tan(csg_cone['diagonal_angle'])),
             x0=0.0,
             y0=0.0,
             r2=(np.tan(csg_cone['diagonal_angle'])) ** 2
@@ -420,7 +420,7 @@ class NuclearFusion:
 
         regions['simulation_volume'] = -surfaces['unit_hexagon'] & +surfaces['tokamak_major_radius'] & -surfaces['axial_end']
 
-        regions['first_wall'] = -surfaces['unit_hexagon'] & +surfaces['first_wall'] & -surfaces['axial_end']
+        regions['first_wall'] = -surfaces['unit_hexagon'] & +surfaces['first_wall'] & -surfaces['fw_back']
 
         regions['first_wall_channel'] = -surfaces['unit_hexagon'] & +surfaces['fw_back'] & -surfaces['fw_channel_back']
 
