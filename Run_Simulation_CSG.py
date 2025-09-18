@@ -1,11 +1,11 @@
-# Run_Simulation_DAGMC.py
+# Run_Simulation_CSG.py
 
 import sys
 import os
 import yaml
 
-from GUI_DAGMC import StatusWindow, SourceSelectionWindow
-from Simulation_Builder_DAGMC import NuclearFusion
+from GUI_CSG import StatusWindow, SourceSelectionWindow
+from Simulation_Builder_CSG import NuclearFusion
 
 def setup_ui_and_get_choice():
     """GUI를 설정하고 사용자의 소스 선택 받기"""
@@ -40,8 +40,8 @@ def main():
     try:
 
         # 설정 파일(yaml) 불러오기
-        print("--- Loading configuration from config_DAGMC.yaml file ---")
-        with open('config_DAGMC.yaml', 'r') as f:
+        print("--- Loading configuration from config_CSG.yaml file ---")
+        with open('config_CSG.yaml', 'r') as f:
             config = yaml.safe_load(f)
 
         # GUI 설정 및 플라즈마 소스 입력

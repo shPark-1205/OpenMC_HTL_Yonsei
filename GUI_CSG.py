@@ -1,4 +1,4 @@
-# GUI_DAGMC.py
+# GUI_CSG.py
 
 import tkinter as tk
 from tkinter import font
@@ -126,7 +126,7 @@ class StatusWindow:
 class SourceSelectionWindow:
 
     def __init__(self, title="Defining Plasma Source"):
-        with open('config_DAGMC.yaml', 'r') as f:
+        with open('config_CSG.yaml', 'r') as f:
             config = yaml.safe_load(f)
 
         self.config = config

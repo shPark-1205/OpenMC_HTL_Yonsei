@@ -1,4 +1,4 @@
-# Simulation_Builder_DAGMC.py
+# Simulation_Builder_CSG.py
 
 import openmc
 import numpy as np
