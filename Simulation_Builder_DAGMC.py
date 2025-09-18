@@ -305,44 +305,191 @@ class NuclearFusion:
             -> 이후 DAGMC를 활용해서 OpenMC로 .h5m 파일 전송
         """
 
-        print("\n\n\nDefining geometry with DAGMC from .h5m file...")
+        print("\n\n\nDefining geometry with CSG...")
 
-        """
-        지금 해석 형상은 육각기둥 모양의 unit cell이기 때문에
-        DAGMC보다 아주 약간 큰 육각기둥을 만들고 periodic 경계 조건을 부여함.
-        만약 해석하고자 하는 형상이 육각기둥이 아니라면,
-        final_region을 본인 형상에 맞게 수정해야 함.
-        """
-        
-        # HexagonalPrism은 z축 axis만 지원
-        hex_prism = openmc.model.HexagonalPrism(
-            edge_length=(self.config['geometry']['characteristic_length']),
+        csg_plane = self.config['csg_geometry']['plane']
+        csg_cylinder = self.config['csg_geometry']['cylinder']
+        csg_hexagon = self.config['csg_geometry']['hexagon']
+        csg_cone = self.config['csg_geometry']['cone']
+
+        # surfaces
+        surfaces = {}
+
+        # --- Planes ---
+        surfaces['tokamak_major_radius'] = openmc.ZPlane(z0=self.tokamak_major_radius-5.0,
+                                                         boundary_type='vacuum')
+        surfaces['first_wall'] = openmc.ZPlane(z0=self.tokamak_radius)
+        surfaces['fw_back'] = openmc.ZPlane(z0=self.tokamak_radius
+                                               + csg_plane['first_wall_thickness'])
+        surfaces['fw_channel_back'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness'])
+        surfaces['impinging_plane'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_impinging'])
+        surfaces['multiplier_front'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_multiplier'])
+        surfaces['pin_front'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_impinging']
+                                                       + csg_plane['impinging_to_pin'])
+        surfaces['pin_back'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_impinging']
+                                                       + csg_plane['impinging_to_pin']
+                                                       + csg_plane['pin_tip_thickness'])
+        surfaces['pin_diagonal'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_impinging']
+                                                       + csg_plane['impinging_to_pin']
+                                                       + csg_plane['pin_tip_thickness']
+                                                       + csg_plane['cone_axial'])
+        surfaces['multiplier_back'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_multiplier']
+                                                       + csg_plane['length_multiplier'])
+        surfaces['axial_end'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['first_wall_thickness']
+                                                       + csg_plane['fw_channel_thickness']
+                                                       + csg_plane['fw_channel_to_impinging']
+                                                       + csg_plane['impinging_to_pin']
+                                                       + csg_plane['pin_tip_thickness']
+                                                       + csg_plane['cone_axial']
+                                                       + csg_plane['length_straight'],
+                                              boundary_type='vacuum')
+
+        # --- Cylinders ---
+        surfaces['multiplier_inner'] = openmc.ZCylinder(radius=csg_cylinder['multiplier_inner'])
+        surfaces['tube_outer'] = openmc.ZCylinder(radius=csg_cylinder['tube_outer'])
+        surfaces['tube_inner'] = openmc.ZCylinder(radius=csg_cylinder['tube_inner'])
+        surfaces['pin_outer'] = openmc.ZCylinder(radius=csg_cylinder['pin_outer'])
+        surfaces['breeder_outer'] = openmc.ZCylinder(radius=csg_cylinder['breeder_outer'])
+        surfaces['breeder_inner'] = openmc.ZCylinder(radius=csg_cylinder['breeder_inner'])
+        surfaces['pin_inner'] = openmc.ZCylinder(radius=csg_cylinder['pin_inner'])
+
+        # --- Hexagons ---
+        surfaces['unit_hexagon'] = openmc.model.HexagonalPrism(
+            edge_length=csg_hexagon['unit'],
             origin=(0.0, 0.0),
             orientation='y',
             boundary_type='periodic'
         )
-
-        z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
-        z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
-
-        final_region = -hex_prism & +z_min_plane & -z_max_plane
-
-        # DAGMC를 위해 형상 불러오기
-        h5m_path = self.config['geometry']['h5m_path']
-
-        # auto_geom_ids를 활성화해야 OpenMC CSG ID랑 충돌하지 않는 것 같음.
-        dag_universe = openmc.DAGMCUniverse(filename=h5m_path, auto_geom_ids=True)
-
-        root_cell = openmc.Cell(
-            name='root_cell',
-            region=final_region,
-            fill=dag_universe,
-            cell_id=999
+        surfaces['multiplier_hexagon'] = openmc.model.HexagonalPrism(
+            edge_length=csg_hexagon['multiplier'],
+            origin=(0.0, 0.0),
+            orientation='y'
         )
 
-        # 최종 형상 조립
-        root_universe = openmc.Universe(cells=[root_cell])
+        # --- Cones ---
+        surfaces['outer_pin_diagonal'] = openmc.model.ZConeOneSided(
+            z0=self.tokamak_radius
+               + csg_plane['first_wall_thickness']
+               + csg_plane['fw_channel_thickness']
+               + csg_plane['fw_channel_to_impinging']
+               + csg_plane['impinging_to_pin']
+               + csg_plane['pin_tip_thickness']
+               + csg_plane['cone_axial']
+               -(csg_cylinder['pin_outer'] / np.tan(csg_cone['diagonal_angle'])),
+            x0=0.0,
+            y0=0.0,
+            r2=(np.tan(csg_cone['diagonal_angle'])) ** 2
+        )
+        surfaces['inner_pin_diagonal'] = openmc.model.ZConeOneSided(
+            z0=self.tokamak_radius
+               + csg_plane['first_wall_thickness']
+               + csg_plane['fw_channel_thickness']
+               + csg_plane['fw_channel_to_impinging']
+               + csg_plane['impinging_to_pin']
+               + csg_plane['pin_tip_thickness']
+               + csg_plane['cone_axial']
+               - (csg_cylinder['pin_inner'] / np.tan(csg_cone['diagonal_angle'])),
+            x0=0.0,
+            y0=0.0,
+            r2=(np.tan(csg_cone['diagonal_angle'])) ** 2
+        )
+
+        # regions
+        regions = {}
+
+        regions['simulation_volume'] = -surfaces['unit_hexagon'] & +surfaces['tokamak_major_radius'] & -surfaces['axial_end']
+
+        regions['first_wall'] = -surfaces['unit_hexagon'] & +surfaces['first_wall'] & -surfaces['axial_end']
+
+        regions['first_wall_channel'] = -surfaces['unit_hexagon'] & +surfaces['fw_back'] & -surfaces['fw_channel_back']
+
+        regions['tube_axial'] = -surfaces['tube_outer'] & +surfaces['tube_inner'] & +surfaces['fw_channel_back'] & -surfaces['axial_end']
+        regions['tube_radial'] = -surfaces['tube_inner'] & +surfaces['fw_channel_back'] & -surfaces['impinging_plane']
+        regions['tube'] = regions['tube_axial'] | regions['tube_radial']
+
+        regions['breeder'] = -surfaces['breeder_outer'] & -surfaces['inner_pin_diagonal'] & +surfaces['breeder_inner'] & +surfaces['pin_back'] & -surfaces['axial_end']
+
+        regions['pin_outer'] = -surfaces['pin_outer'] & -surfaces['outer_pin_diagonal'] & +surfaces['pin_inner'] & +surfaces['pin_front'] & -surfaces['axial_end']
+        regions['pin'] = regions['pin_outer'] & ~regions['breeder']
+
+        regions['he_main_outer'] = -surfaces['tube_inner'] & +surfaces['impinging_plane'] & -surfaces['axial_end']
+        regions['he_main'] = regions['he_main_outer'] & ~(regions['pin'] | regions['breeder'])
+
+        regions['multiplier'] = -surfaces['multiplier_hexagon'] & +surfaces['multiplier_inner'] & +surfaces['multiplier_front'] & -surfaces['multiplier_back']
+
+        regions['he_purge_outer'] = -surfaces['unit_hexagon'] & +surfaces['fw_channel_back'] & -surfaces['axial_end']
+        regions['he_purge'] = regions['he_purge_outer'] & ~(regions['multiplier'] | regions['tube'] | regions['he_main'] | regions['pin'] | regions['breeder'])
+
+        filled_regions = [
+            regions['first_wall'],
+            regions['first_wall_channel'],
+            regions['tube'],
+            regions['breeder'],
+            regions['pin'],
+            regions['he_main'],
+            regions['multiplier'],
+            regions['he_purge'],
+        ]
+
+        regions['void'] = regions['simulation_volume'] & ~openmc.Union(filled_regions)
+
+        # cells
+        cells = {}
+
+        cells['first_wall'] = openmc.Cell(fill=self.materials['tungsten'],
+                                          region=regions['first_wall'],
+                                          name='first_wall')
+        cells['first_wall_channel'] = openmc.Cell(fill=self.materials['eurofer_first_wall_channel'],
+                                                  region=regions['first_wall_channel'],
+                                                  name='first_wall_channel')
+        cells['tube'] = openmc.Cell(fill=self.materials['eurofer_pressure_tube'],
+                                    region=regions['tube'],
+                                    name='tube')
+        cells['breeder'] = openmc.Cell(fill=self.materials['breeder_pebble_mix'],
+                                       region=regions['breeder'],
+                                       name='breeder')
+        cells['pin'] = openmc.Cell(fill=self.materials['eurofer_pin'],
+                                   region=regions['pin'],
+                                   name='pin')
+        cells['he_main'] = openmc.Cell(fill=self.materials['He_inner'],
+                                       region=regions['he_main'],
+                                       name='he_main')
+        cells['multiplier'] = openmc.Cell(fill=self.materials['Be12Ti_outer'],
+                                          region=regions['multiplier'],
+                                          name='multiplier')
+        cells['he_purge'] = openmc.Cell(fill=self.materials['He_outer'],
+                                        region=regions['he_purge'],
+                                        name='he_purge')
+        cells['void'] = openmc.Cell(fill=None,
+                                    region=regions['void'],
+                                    name='void')
+
+        # universe
+        root_universe = openmc.Universe(name='root_universe',
+                                        cells=list(cells.values()))
         geometry_obj = openmc.Geometry(root_universe)
+
 
         print("\nExporting geometry to geometry.xml...")
         geometry_obj.export_to_xml()
@@ -934,7 +1081,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            openmc.run(tracks=True, threads=self.config['simulation']['threads'])
+            # openmc.run(tracks=True, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")

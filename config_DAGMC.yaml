@@ -40,6 +40,34 @@ geometry:
   characteristic_length: 7.2168783648703220563643597562745
   h5m_path: '/opt/geometries/20250815_EU_DEMO_HCPB_LP_WIDE_CELL_ZAxis_Channel.h5m'
 
+# CSG parameters [cm]
+csg_geometry:
+  plane:
+    first_wall_thickness: 0.2
+    fw_channel_thickness: 2.0
+    fw_channel_to_impinging: 0.4
+    fw_channel_to_multiplier: 0.5
+    length_multiplier: 40.0
+    impinging_to_pin: 1.0
+    pin_tip_thickness: 0.3
+    cone_axial: 5.3
+    length_straight: 37.0
+  cylinder:
+    multiplier_inner: 4.0
+    tube_outer: 3.9
+    tube_inner: 3.5
+    pin_outer: 3.3
+    breeder_outer: 3.0
+    breeder_inner: 1.4
+    pin_inner: 0.8
+  hexagon:
+    unit: 7.217
+    multiplier: 6.64
+  cone:
+    diagonal_angle: 0.2281
+
+
+
 
 # DAGMC 형상 감싸는 박스
 bounding:
