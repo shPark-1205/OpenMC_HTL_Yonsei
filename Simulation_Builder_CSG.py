@@ -906,6 +906,7 @@ class NuclearFusion:
                 self.materials['breeder_pebble_mix']: (255, 0, 0),  # 빨간색
                 self.materials['He_inner']: (0, 0, 255),  # 파란색
                 self.materials['He_outer']: (0, 0, 255),  # 파란색
+                self.materials['He_channel']: (0, 0, 255),  # 파란색
                 self.materials['tungsten']: (128, 0, 128),  # 보라색
             }
 
