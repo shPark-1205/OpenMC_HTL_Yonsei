@@ -777,7 +777,7 @@ class NuclearFusion:
             mesh = openmc.RegularMesh(name='z_aligned_mesh')
 
             mesh_z_min = self.tokamak_radius  # OB FW 위치부터
-            mesh_z_max = self.config['bounding']['z_max'] # OB Pin 맨 끝까지
+            mesh_z_max = self.config['geometry']['axial_end'] # OB Pin 맨 끝까지
 
             # x, y 방향으로는 해석 형상을 감싸는 정사각형
             mesh_y_min = -self.config['geometry']['characteristic_length']
