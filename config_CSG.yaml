@@ -61,6 +61,11 @@ csg_geometry:
     breeder_outer: 3.0
     breeder_inner: 1.4
     pin_inner: 0.8
+  rectangle:
+    width: 1.2
+    height: 1.2
+    pitch: 1.65
+    fw_back_to_channel_front: 0.2
   hexagon:
     unit: 7.217
     multiplier: 6.64
