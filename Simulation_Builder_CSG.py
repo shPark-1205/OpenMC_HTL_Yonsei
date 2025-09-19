@@ -309,6 +309,7 @@ class NuclearFusion:
 
         csg_plane = self.config['csg_geometry']['plane']
         csg_cylinder = self.config['csg_geometry']['cylinder']
+        csg_rectangle = self.config['csg_geometry']['rectangle']
         csg_hexagon = self.config['csg_geometry']['hexagon']
         csg_cone = self.config['csg_geometry']['cone']
 
@@ -374,6 +375,64 @@ class NuclearFusion:
         surfaces['breeder_inner'] = openmc.ZCylinder(r=csg_cylinder['breeder_inner'])
         surfaces['pin_inner'] = openmc.ZCylinder(r=csg_cylinder['pin_inner'])
 
+        # --- Rectangles ---
+        rectangles_z_coord = self.tokamak_radius + csg_plane['first_wall_thickness'] + csg_rectangle['fw_back_to_channel_front'] + csg_rectangle['height'] / 2.0
+
+        surfaces['fw_channel_center'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(csg_rectangle['pitch'] * 0, rectangles_z_coord)
+        )
+        surfaces['fw_channel_pos_1'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(csg_rectangle['pitch'] * 1, rectangles_z_coord)
+        )
+        surfaces['fw_channel_pos_2'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(csg_rectangle['pitch'] * 2, rectangles_z_coord)
+        )
+        surfaces['fw_channel_pos_3'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(csg_rectangle['pitch'] * 3, rectangles_z_coord)
+        )
+        surfaces['fw_channel_pos_4'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(csg_rectangle['pitch'] * 4, rectangles_z_coord)
+        )
+        surfaces['fw_channel_neg_1'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(-csg_rectangle['pitch'] * 1, rectangles_z_coord)
+        )
+        surfaces['fw_channel_neg_2'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(-csg_rectangle['pitch'] * 2, rectangles_z_coord)
+        )
+        surfaces['fw_channel_neg_3'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(-csg_rectangle['pitch'] * 3, rectangles_z_coord)
+        )
+        surfaces['fw_channel_neg_4'] = openmc.model.RectangularPrism(
+            width=csg_rectangle['width'],
+            height=csg_rectangle['height'],
+            axis='y',
+            origin=(-csg_rectangle['pitch'] * 4, rectangles_z_coord)
+        )
+
         # --- Hexagons ---
         surfaces['unit_hexagon'] = openmc.model.HexagonalPrism(
             edge_length=csg_hexagon['unit'],
@@ -422,7 +481,19 @@ class NuclearFusion:
 
         regions['first_wall'] = -surfaces['unit_hexagon'] & +surfaces['first_wall'] & -surfaces['fw_back']
 
-        regions['first_wall_channel'] = -surfaces['unit_hexagon'] & +surfaces['fw_back'] & -surfaces['fw_channel_back']
+        regions['he_channel_center'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_center']
+        regions['he_channel_pos_1'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_pos_1']
+        regions['he_channel_pos_2'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_pos_2']
+        regions['he_channel_pos_3'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_pos_3']
+        regions['he_channel_pos_4'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_pos_4']
+        regions['he_channel_neg_1'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_neg_1']
+        regions['he_channel_neg_2'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_neg_2']
+        regions['he_channel_neg_3'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_neg_3']
+        regions['he_channel_neg_4'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_neg_4']
+        regions['he_channel'] = regions['he_channel_center'] | regions['he_channel_pos_1'] | regions['he_channel_pos_2'] | regions['he_channel_pos_3'] | regions['he_channel_pos_4'] | regions['he_channel_neg_1'] | regions['he_channel_neg_2'] | regions['he_channel_neg_3'] | regions['he_channel_neg_4']
+
+        regions['first_wall_channel_wo_he'] = -surfaces['unit_hexagon'] & +surfaces['fw_back'] & -surfaces['fw_channel_back']
+        regions['first_wall_channel'] = regions['first_wall_channel_wo_he'] & ~(regions['he_channel'])
 
         regions['tube_axial'] = -surfaces['tube_outer'] & +surfaces['tube_inner'] & +surfaces['fw_channel_back'] & -surfaces['axial_end']
         regions['tube_radial'] = -surfaces['tube_inner'] & +surfaces['fw_channel_back'] & -surfaces['impinging_plane']
@@ -443,6 +514,7 @@ class NuclearFusion:
 
         filled_regions = [
             regions['first_wall'],
+            regions['he_channel'],
             regions['first_wall_channel'],
             regions['tube'],
             regions['breeder'],
@@ -460,6 +532,9 @@ class NuclearFusion:
         cells['first_wall'] = openmc.Cell(fill=self.materials['tungsten'],
                                           region=regions['first_wall'],
                                           name='first_wall')
+        cells['he_channel'] = openmc.Cell(fill=self.materials['He_channel'],
+                                          region=regions['he_channel'],
+                                          name='he_channel')
         cells['first_wall_channel'] = openmc.Cell(fill=self.materials['eurofer_first_wall_channel'],
                                                   region=regions['first_wall_channel'],
                                                   name='first_wall_channel')
@@ -1082,7 +1157,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            # openmc.run(tracks=True, threads=self.config['simulation']['threads'])
+            openmc.run(tracks=True, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")
