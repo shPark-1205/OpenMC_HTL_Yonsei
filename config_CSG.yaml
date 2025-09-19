@@ -38,6 +38,7 @@ geometry:
   tokamak_minor_radius: 292.258
   # Edge length of triagle or hexagon depending on your geometry unit cell
   characteristic_length: 7.2168783648703220563643597562745
+  axial_end: 1244.458
   h5m_path: '/opt/geometries/20250815_EU_DEMO_HCPB_LP_WIDE_CELL_ZAxis_Channel.h5m'
 
 # CSG parameters [cm]
