@@ -311,7 +311,6 @@ class NuclearFusion:
         csg_cylinder = self.config['csg_geometry']['cylinder']
         csg_rectangle = self.config['csg_geometry']['rectangle']
         csg_hexagon = self.config['csg_geometry']['hexagon']
-        csg_cone = self.config['csg_geometry']['cone']
 
         # surfaces
         surfaces = {}
@@ -322,57 +321,56 @@ class NuclearFusion:
         surfaces['first_wall'] = openmc.ZPlane(z0=self.tokamak_radius)
         surfaces['fw_back'] = openmc.ZPlane(z0=self.tokamak_radius
                                                + csg_plane['first_wall_thickness'])
-        surfaces['fw_channel_back'] = openmc.ZPlane(z0=self.tokamak_radius
-                                                       + csg_plane['first_wall_thickness']
-                                                       + csg_plane['fw_channel_thickness'])
         surfaces['impinging_plane'] = openmc.ZPlane(z0=self.tokamak_radius
                                                        + csg_plane['first_wall_thickness']
-                                                       + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_impinging'])
-        surfaces['multiplier_front'] = openmc.ZPlane(z0=self.tokamak_radius
-                                                       + csg_plane['first_wall_thickness']
-                                                       + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_multiplier'])
+                                                       + csg_plane['fw_channel_thickness'])
         surfaces['pin_front'] = openmc.ZPlane(z0=self.tokamak_radius
                                                        + csg_plane['first_wall_thickness']
                                                        + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_impinging']
                                                        + csg_plane['impinging_to_pin'])
         surfaces['pin_back'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                 + csg_plane['first_wall_thickness']
+                                                 + csg_plane['fw_channel_thickness']
+                                                 + csg_plane['impinging_to_pin']
+                                                 + csg_plane['pin_tip_thickness'])
+        surfaces['inner_multiplier_back'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                 + csg_plane['first_wall_thickness']
+                                                 + csg_plane['fw_channel_thickness']
+                                                 + csg_plane['impinging_to_pin']
+                                                 + csg_plane['pin_tip_thickness']
+                                                 + csg_plane['length_inner_multiplier'])
+        surfaces['outer_multiplier_front'] = openmc.ZPlane(z0=self.tokamak_radius
                                                        + csg_plane['first_wall_thickness']
                                                        + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_impinging']
-                                                       + csg_plane['impinging_to_pin']
-                                                       + csg_plane['pin_tip_thickness'])
-        surfaces['pin_diagonal'] = openmc.ZPlane(z0=self.tokamak_radius
+                                                       + csg_plane['impinging_to_outer_multiplier'])
+        surfaces['outer_multiplier_back'] = openmc.ZPlane(z0=self.tokamak_radius
                                                        + csg_plane['first_wall_thickness']
                                                        + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_impinging']
-                                                       + csg_plane['impinging_to_pin']
-                                                       + csg_plane['pin_tip_thickness']
-                                                       + csg_plane['cone_axial'])
-        surfaces['multiplier_back'] = openmc.ZPlane(z0=self.tokamak_radius
-                                                       + csg_plane['first_wall_thickness']
-                                                       + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_multiplier']
-                                                       + csg_plane['length_multiplier'])
+                                                       + csg_plane['impinging_to_outer_multiplier']
+                                                       + csg_plane['length_outer_multiplier'])
         surfaces['axial_end'] = openmc.ZPlane(z0=self.tokamak_radius
-                                                       + csg_plane['first_wall_thickness']
-                                                       + csg_plane['fw_channel_thickness']
-                                                       + csg_plane['fw_channel_to_impinging']
-                                                       + csg_plane['impinging_to_pin']
-                                                       + csg_plane['pin_tip_thickness']
-                                                       + csg_plane['cone_axial']
-                                                       + csg_plane['length_straight'],
+                                                 + csg_plane['first_wall_thickness']
+                                                 + csg_plane['fw_channel_thickness']
+                                                 + csg_plane['impinging_to_pin']
+                                                 + csg_plane['pin_tip_thickness']
+                                                 + csg_plane['length_inner_multiplier']
+                                                 + csg_plane['inner_multiplier_back_to_axial_end'],
                                               boundary_type='vacuum')
+        surfaces['outer_multiplier_1_6'] = openmc.XPlane(x0=-csg_plane['purge_gap'] / 2)
+        surfaces['outer_multiplier_7_12'] = openmc.XPlane(x0=csg_plane['purge_gap'] / 2)
+        surfaces['outer_multiplier_2_9'] = openmc.Plane(a=1.0, b=np.sqrt(3.0), c=0.0, d=csg_plane['purge_gap'])
+        surfaces['outer_multiplier_3_8'] = openmc.Plane(a=1.0, b=np.sqrt(3.0), c=0.0, d=-csg_plane['purge_gap'])
+        surfaces['outer_multiplier_4_11'] = openmc.Plane(a=-1.0, b=np.sqrt(3.0), c=0.0, d=csg_plane['purge_gap'])
+        surfaces['outer_multiplier_5_10'] = openmc.Plane(a=-1.0, b=np.sqrt(3.0), c=0.0, d=-csg_plane['purge_gap'])
 
         # --- Cylinders ---
-        surfaces['multiplier_inner'] = openmc.ZCylinder(r=csg_cylinder['multiplier_inner'])
+        surfaces['outer_multiplier'] = openmc.ZCylinder(r=csg_cylinder['outer_multiplier'])
         surfaces['tube_outer'] = openmc.ZCylinder(r=csg_cylinder['tube_outer'])
         surfaces['tube_inner'] = openmc.ZCylinder(r=csg_cylinder['tube_inner'])
         surfaces['pin_outer'] = openmc.ZCylinder(r=csg_cylinder['pin_outer'])
         surfaces['breeder_outer'] = openmc.ZCylinder(r=csg_cylinder['breeder_outer'])
         surfaces['breeder_inner'] = openmc.ZCylinder(r=csg_cylinder['breeder_inner'])
+        surfaces['multiplier_inner'] = openmc.ZCylinder(r=csg_cylinder['multiplier_inner'])
         surfaces['pin_inner'] = openmc.ZCylinder(r=csg_cylinder['pin_inner'])
 
         # --- Rectangles ---
@@ -381,55 +379,55 @@ class NuclearFusion:
         surfaces['fw_channel_center'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(csg_rectangle['pitch'] * 0, rectangles_z_coord)
         )
         surfaces['fw_channel_pos_1'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(csg_rectangle['pitch'] * 1, rectangles_z_coord)
         )
         surfaces['fw_channel_pos_2'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(csg_rectangle['pitch'] * 2, rectangles_z_coord)
         )
         surfaces['fw_channel_pos_3'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(csg_rectangle['pitch'] * 3, rectangles_z_coord)
         )
         surfaces['fw_channel_pos_4'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(csg_rectangle['pitch'] * 4, rectangles_z_coord)
         )
         surfaces['fw_channel_neg_1'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(-csg_rectangle['pitch'] * 1, rectangles_z_coord)
         )
         surfaces['fw_channel_neg_2'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(-csg_rectangle['pitch'] * 2, rectangles_z_coord)
         )
         surfaces['fw_channel_neg_3'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(-csg_rectangle['pitch'] * 3, rectangles_z_coord)
         )
         surfaces['fw_channel_neg_4'] = openmc.model.RectangularPrism(
             width=csg_rectangle['width'],
             height=csg_rectangle['height'],
-            axis='y',
+            axis='x',
             origin=(-csg_rectangle['pitch'] * 4, rectangles_z_coord)
         )
 
@@ -437,41 +435,8 @@ class NuclearFusion:
         surfaces['unit_hexagon'] = openmc.model.HexagonalPrism(
             edge_length=csg_hexagon['unit'],
             origin=(0.0, 0.0),
-            orientation='y',
+            orientation='x',
             boundary_type='periodic'
-        )
-        surfaces['multiplier_hexagon'] = openmc.model.HexagonalPrism(
-            edge_length=csg_hexagon['multiplier'],
-            origin=(0.0, 0.0),
-            orientation='y'
-        )
-
-        # --- Cones ---
-        surfaces['outer_pin_diagonal'] = openmc.model.ZConeOneSided(
-            z0=self.tokamak_radius
-               + csg_plane['first_wall_thickness']
-               + csg_plane['fw_channel_thickness']
-               + csg_plane['fw_channel_to_impinging']
-               + csg_plane['impinging_to_pin']
-               + csg_plane['pin_tip_thickness']
-               + csg_plane['cone_axial']
-               -(csg_cylinder['pin_outer'] / np.tan(csg_cone['diagonal_angle'])),
-            x0=0.0,
-            y0=0.0,
-            r2=(np.tan(csg_cone['diagonal_angle'])) ** 2
-        )
-        surfaces['inner_pin_diagonal'] = openmc.model.ZConeOneSided(
-            z0=self.tokamak_radius
-               + csg_plane['first_wall_thickness']
-               + csg_plane['fw_channel_thickness']
-               + csg_plane['fw_channel_to_impinging']
-               + csg_plane['impinging_to_pin']
-               + csg_plane['pin_tip_thickness']
-               + csg_plane['cone_axial']
-               - (csg_cylinder['breeder_outer'] / np.tan(csg_cone['diagonal_angle'])),
-            x0=0.0,
-            y0=0.0,
-            r2=(np.tan(csg_cone['diagonal_angle'])) ** 2
         )
 
         # regions
@@ -492,35 +457,43 @@ class NuclearFusion:
         regions['he_channel_neg_4'] = -surfaces['unit_hexagon'] & -surfaces['fw_channel_neg_4']
         regions['he_channel'] = regions['he_channel_center'] | regions['he_channel_pos_1'] | regions['he_channel_pos_2'] | regions['he_channel_pos_3'] | regions['he_channel_pos_4'] | regions['he_channel_neg_1'] | regions['he_channel_neg_2'] | regions['he_channel_neg_3'] | regions['he_channel_neg_4']
 
-        regions['first_wall_channel_wo_he'] = -surfaces['unit_hexagon'] & +surfaces['fw_back'] & -surfaces['fw_channel_back']
+        regions['first_wall_channel_wo_he'] = -surfaces['unit_hexagon'] & +surfaces['fw_back'] & -surfaces['impinging_plane']
         regions['first_wall_channel'] = regions['first_wall_channel_wo_he'] & ~(regions['he_channel'])
 
-        regions['tube_axial'] = -surfaces['tube_outer'] & +surfaces['tube_inner'] & +surfaces['fw_channel_back'] & -surfaces['axial_end']
-        regions['tube_radial'] = -surfaces['tube_inner'] & +surfaces['fw_channel_back'] & -surfaces['impinging_plane']
-        regions['tube'] = regions['tube_axial'] | regions['tube_radial']
+        regions['tube'] = -surfaces['tube_outer'] & +surfaces['tube_inner'] & +surfaces['impinging_plane'] & -surfaces['axial_end']
 
-        regions['breeder'] = -surfaces['breeder_outer'] & -surfaces['inner_pin_diagonal'] & +surfaces['breeder_inner'] & +surfaces['pin_back'] & -surfaces['axial_end']
+        regions['inner_multiplier'] = -surfaces['breeder_inner'] & +surfaces['multiplier_inner'] & +surfaces['pin_back'] & -surfaces['inner_multiplier_back']
 
-        regions['pin_outer'] = -surfaces['pin_outer'] & -surfaces['outer_pin_diagonal'] & +surfaces['pin_inner'] & +surfaces['pin_front'] & -surfaces['axial_end']
-        regions['pin'] = regions['pin_outer'] & ~regions['breeder']
+        regions['breeder_outer'] = -surfaces['breeder_outer'] & +surfaces['multiplier_inner'] & +surfaces['pin_back'] & -surfaces['axial_end']
+        regions['breeder'] = regions['breeder_outer'] & ~regions['inner_multiplier']
+
+        regions['pin_outer'] = -surfaces['pin_outer'] & +surfaces['pin_inner'] & +surfaces['pin_front'] & -surfaces['axial_end']
+        regions['pin'] = regions['pin_outer'] & ~(regions['breeder'] | regions['inner_multiplier'])
 
         regions['he_main_outer'] = -surfaces['tube_inner'] & +surfaces['impinging_plane'] & -surfaces['axial_end']
-        regions['he_main'] = regions['he_main_outer'] & ~(regions['pin'] | regions['breeder'])
+        regions['he_main'] = regions['he_main_outer'] & ~(regions['pin'] | regions['breeder'] | regions['inner_multiplier'])
 
-        regions['multiplier'] = -surfaces['multiplier_hexagon'] & +surfaces['multiplier_inner'] & +surfaces['multiplier_front'] & -surfaces['multiplier_back']
+        regions['outer_multiplier_a'] = -surfaces['unit_hexagon'] & +surfaces['outer_multiplier'] & -surfaces['outer_multiplier_1_6'] & +surfaces['outer_multiplier_2_9'] & +surfaces['outer_multiplier_front'] & -surfaces['outer_multiplier_back']
+        regions['outer_multiplier_b'] = -surfaces['unit_hexagon'] & +surfaces['outer_multiplier'] & -surfaces['outer_multiplier_3_8'] & +surfaces['outer_multiplier_4_11'] & +surfaces['outer_multiplier_front'] & -surfaces['outer_multiplier_back']
+        regions['outer_multiplier_c'] = -surfaces['unit_hexagon'] & +surfaces['outer_multiplier'] & -surfaces['outer_multiplier_5_10'] & -surfaces['outer_multiplier_1_6'] & +surfaces['outer_multiplier_front'] & -surfaces['outer_multiplier_back']
+        regions['outer_multiplier_d'] = -surfaces['unit_hexagon'] & +surfaces['outer_multiplier'] & +surfaces['outer_multiplier_7_12'] & -surfaces['outer_multiplier_3_8'] & +surfaces['outer_multiplier_front'] & -surfaces['outer_multiplier_back']
+        regions['outer_multiplier_e'] = -surfaces['unit_hexagon'] & +surfaces['outer_multiplier'] & +surfaces['outer_multiplier_2_9'] & -surfaces['outer_multiplier_5_10'] & +surfaces['outer_multiplier_front'] & -surfaces['outer_multiplier_back']
+        regions['outer_multiplier_f'] = -surfaces['unit_hexagon'] & +surfaces['outer_multiplier'] & +surfaces['outer_multiplier_4_11'] & +surfaces['outer_multiplier_7_12'] & +surfaces['outer_multiplier_front'] & -surfaces['outer_multiplier_back']
+        regions['outer_multiplier'] = regions['outer_multiplier_a'] | regions['outer_multiplier_b'] | regions['outer_multiplier_c'] | regions['outer_multiplier_d'] | regions['outer_multiplier_e'] | regions['outer_multiplier_f']
 
-        regions['he_purge_outer'] = -surfaces['unit_hexagon'] & +surfaces['fw_channel_back'] & -surfaces['axial_end']
-        regions['he_purge'] = regions['he_purge_outer'] & ~(regions['multiplier'] | regions['tube'] | regions['he_main'] | regions['pin'] | regions['breeder'])
+        regions['he_purge_outer'] = -surfaces['unit_hexagon'] & +surfaces['tube_outer'] &+ surfaces['impinging_plane'] & -surfaces['axial_end']
+        regions['he_purge'] = regions['he_purge_outer'] & ~regions['outer_multiplier']
 
         filled_regions = [
             regions['first_wall'],
             regions['he_channel'],
             regions['first_wall_channel'],
             regions['tube'],
+            regions['inner_multiplier'],
             regions['breeder'],
             regions['pin'],
             regions['he_main'],
-            regions['multiplier'],
+            regions['outer_multiplier'],
             regions['he_purge'],
         ]
 
@@ -541,6 +514,9 @@ class NuclearFusion:
         cells['tube'] = openmc.Cell(fill=self.materials['eurofer_pressure_tube'],
                                     region=regions['tube'],
                                     name='tube')
+        cells['inner_multiplier'] = openmc.Cell(fill=self.materials['Be12Ti_inner'],
+                                                region=regions['inner_multiplier'],
+                                                name='inner_multiplier')
         cells['breeder'] = openmc.Cell(fill=self.materials['breeder_pebble_mix'],
                                        region=regions['breeder'],
                                        name='breeder')
@@ -550,9 +526,9 @@ class NuclearFusion:
         cells['he_main'] = openmc.Cell(fill=self.materials['He_inner'],
                                        region=regions['he_main'],
                                        name='he_main')
-        cells['multiplier'] = openmc.Cell(fill=self.materials['Be12Ti_outer'],
-                                          region=regions['multiplier'],
-                                          name='multiplier')
+        cells['outer_multiplier'] = openmc.Cell(fill=self.materials['Be12Ti_outer'],
+                                          region=regions['outer_multiplier'],
+                                          name='outer_multiplier')
         cells['he_purge'] = openmc.Cell(fill=self.materials['He_outer'],
                                         region=regions['he_purge'],
                                         name='he_purge')
@@ -995,14 +971,14 @@ class NuclearFusion:
             plot_xy.color_by = 'material'
             plot_xy.colors = material_colors
 
-            # plot_yz = openmc.Plot()
-            # plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
-            # plot_yz.width = (30.0, 60.0)
-            # plot_yz.pixels = (1200, 2400)
-            # plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
-            # plot_yz.basis = 'yz'
-            # plot_yz.color_by = 'material'
-            # plot_yz.colors = material_colors
+            plot_yz = openmc.Plot()
+            plot_yz.filename = os.path.join(plots_folder, 'geometry_by_material_yz')
+            plot_yz.width = (15.0, 60.0)
+            plot_yz.pixels = (1500, 6000)
+            plot_yz.origin = (self.config['2D_plot']['x_coord'], self.config['2D_plot']['y_coord'], self.config['2D_plot']['z_coord'])
+            plot_yz.basis = 'yz'
+            plot_yz.color_by = 'material'
+            plot_yz.colors = material_colors
 
             plot_zx = openmc.Plot()
             plot_zx.filename = os.path.join(plots_folder, 'geometry_by_material_zx')
@@ -1014,7 +990,7 @@ class NuclearFusion:
             plot_zx.colors = material_colors
 
             # 플롯 생성
-            plots = openmc.Plots([plot_xy, plot_zx])
+            plots = openmc.Plots([plot_xy, plot_yz, plot_zx])
             plots.export_to_xml()  # plots.xml 생성
 
             # geometry.xml과 materials.xml이 이미 생성된 상태여야 함
@@ -1157,7 +1133,7 @@ class NuclearFusion:
             status_window.update_task_status("Main OpenMC Simulation", "Running...", "blue")
 
             # 해석 시작!!
-            openmc.run(tracks=True, threads=self.config['simulation']['threads'])
+            # openmc.run(tracks=True, threads=self.config['simulation']['threads'])
 
             status_window.update_task_status("Main OpenMC Simulation", "OK! ✓", "green")
             status_window.complete("\nAll simulation tasks finished!\nRefer to /results folder.")
