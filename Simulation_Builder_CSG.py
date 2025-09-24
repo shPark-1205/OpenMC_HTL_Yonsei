@@ -883,6 +883,10 @@ class NuclearFusion:
             tally_local_heating_structure.scores = ['heating']
             tally_local_heating_structure.filters = [mesh_cylindrical_filter, eurofer_filter, particle_filter]
 
+            tally_local_heating_inner_multiplier = openmc.Tally(name='local_heating_inner_multiplier', tally_id=104)
+            tally_local_heating_inner_multiplier.scores = ['heating']
+            tally_local_heating_inner_multiplier.filters = [mesh_cylindrical_filter, be12ti_inner_filter, particle_filter]
+
             tally_local_flux_breeder = openmc.Tally(name='local_flux_breeder', tally_id=201)
             tally_local_flux_breeder.scores = ['flux']
             tally_local_flux_breeder.filters = [mesh_filter, breeder_filter, neutron_filter]
@@ -894,6 +898,10 @@ class NuclearFusion:
             tally_local_flux_structure = openmc.Tally(name='local_flux_structure', tally_id=203)
             tally_local_flux_structure.scores = ['flux']
             tally_local_flux_structure.filters = [mesh_filter, eurofer_filter, neutron_filter]
+
+            tally_local_flux_inner_multiplier = openmc.Tally(name='local_flux_inner_multiplier', tally_id=204)
+            tally_local_flux_inner_multiplier.scores = ['flux']
+            tally_local_flux_inner_multiplier.filters = [mesh_filter, be12ti_inner_filter, neutron_filter]
 
 
             # multiplier 표면의 current 계산을 위한 surface mesh 생성 (r 방향)
@@ -920,9 +928,11 @@ class NuclearFusion:
                 tally_local_heating_breeder,
                 tally_local_heating_multiplier,
                 tally_local_heating_structure,
+                tally_local_heating_inner_multiplier,
                 tally_local_flux_breeder,
                 tally_local_flux_multiplier,
                 tally_local_flux_structure,
+                tally_local_flux_inner_multiplier
                 # tally_current_multiplier,
             ]
 
