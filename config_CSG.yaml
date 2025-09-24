@@ -85,8 +85,8 @@ mesh:
 # 전체 형상을 감싸는 cylindrical mesh 설정
 mesh_cylindrical:
   r_min: 0.0
-  r_max: 6.6
-  division_r: 67 # 0.1 cm 격자
+  r_max: 7.3
+  division_r: 74 # 0.1 cm 격자
   z_min: 1198.258
   z_max: 1244.458
   division_z: 463 # 0.1 cm 격자
