@@ -611,7 +611,7 @@ class NuclearFusion:
 
             tally_global_multiplier = openmc.Tally(name='global_multiplier', tally_id=96)
             tally_global_multiplier.scores = ['flux', 'absorption', 'elastic', 'heating', '(n,2n)']
-            tally_global_multiplier.filters = [be12ti_outer_filter, neutron_filter, energy_filter]
+            tally_global_multiplier.filters = [be12ti_filter, neutron_filter, energy_filter]
             self.tallies.append(tally_global_multiplier)
 
             tally_global_breeder = openmc.Tally(name='global_breeder', tally_id=97)
