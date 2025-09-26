@@ -61,7 +61,7 @@ class SpectrumPlotterApp:
         self.source_rate_entry = ttk.Entry(options_frame, textvariable=self.source_rate_var, width=20)
         self.source_rate_entry.pack(anchor='w', pady=(0, 5))
 
-        ttk.Label(options_frame, text="5. Cell Volume [cm³] (for flux only):").pack(anchor='w')
+        ttk.Label(options_frame, text="5. Cell Volume [cm³] (for flux and heating only):").pack(anchor='w')
         self.volume_var = tk.StringVar(value="1.0")
         self.volume_entry = ttk.Entry(options_frame, textvariable=self.volume_var, width=20)
         self.volume_entry.pack(anchor='w', pady=(0, 10))
@@ -214,8 +214,10 @@ class SpectrumPlotterApp:
                         energy_bins = df_grouped['energy low [eV]']
                         raw_values = df_grouped['mean']
 
-                        if self.selected_score in ['flux', 'heating']:
+                        if self.selected_score == 'flux':
                             normalized_values = raw_values * source_rate / volume
+                        elif self.selected_score == 'heating':
+                            normalized_values = raw_values * source_rate * 1.60E-19 / volume
                         else:
                             normalized_values = raw_values * source_rate
 
