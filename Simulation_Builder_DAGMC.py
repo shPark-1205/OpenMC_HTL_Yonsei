@@ -566,6 +566,7 @@ class NuclearFusion:
             breeder_filter = openmc.MaterialFilter([breeder_object], filter_id=21)
             be12ti_inner_filter = openmc.MaterialFilter([be12ti_inner_object], filter_id=31)
             be12ti_outer_filter = openmc.MaterialFilter([be12ti_outer_object], filter_id=32)
+            be12ti_filter = openmc.MaterialFilter([be12ti_outer_object, be12ti_inner_object], filter_id=33)
             eurofer_filter = openmc.MaterialFilter([eurofer_pressure_tube_object, eurofer_pin_object, eurofer_first_wall_channel_object], filter_id=41)
             tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=51)
 
@@ -596,7 +597,7 @@ class NuclearFusion:
             tally_multiplying = openmc.Tally(name='multiplication', tally_id=99)
             tally_multiplying.scores = ['(n,2n)']
             tally_multiplying.nuclides = ['Be9']
-            tally_multiplying.filters = [be12ti_outer_filter]
+            tally_multiplying.filters = [be12ti_filter]
             self.tallies.append(tally_multiplying)
 
             tally_global_structure = openmc.Tally(name='global_structure', tally_id=94)
