@@ -31,28 +31,52 @@ def conversion_worker(args):
         # UnstructuredMesh를 사용하는 local tally
         if isinstance(mesh, openmc.UnstructuredMesh):
 
-            mesh_shape = (mesh.n_elements,)
+            df = tally.get_pandas_dataframe()
+            is_multi_index = isinstance(df.columns, pd.MultiIndex)
 
-            # 데이터 추출
-            mean_data = tally.get_values(scores=['flux'], value='mean')
-            mean_data = mean_data.reshape(mesh_shape)
-            std_dev_data = tally.get_values(scores=['flux'], value='std_dev')
-            std_dev_data = std_dev_data.reshape(mesh_shape)
-            relative_error = np.divide(std_dev_data, mean_data, out=np.zeros_like(mean_data), where=(mean_data != 0))
+            filtered_df = df.copy()
+            for column, value in active_filters:
+                col_key = (column, '') if is_multi_index else column
+                filter_value = float(value) if column in ['material', 'cell', 'universe'] else value
+                filtered_df = filtered_df[filtered_df[col_key] == filter_value]
 
-            # 파일 이름 생성
-            base_filename = os.path.basename(os.path.basename(sp_path))[0]
+            score_key = ('score', '') if is_multi_index else 'score'
+            filtered_df = filtered_df[filtered_df[score_key] == score_to_plot]
+
+            if filtered_df.empty:
+                return ('success', f"Skipped Tally {tally_id}: No data after filtering.")
+
+            # 필터링된 결과를 1D 배열로 재구성
+            full_mesh_data = np.zeros(mesh.n_elements)
+            variance_sum_data = np.zeros(mesh.n_elements)
+
+            mesh_cell_key = next((col for col in filtered_df.columns if col[1] == 'cell'),
+                                 None) if is_multi_index else 'mesh 1 (cell)'
+            mean_key = ('mean', '') if is_multi_index else 'mean'
+            std_dev_key = ('std. dev.', '') if is_multi_index else 'std. dev.'
+
+            for _, row in filtered_df.iterrows():
+                idx = int(row[mesh_cell_key]) - 1
+                full_mesh_data[idx] += row[mean_key]
+                variance_sum_data[idx] += row[std_dev_key] ** 2
+
+            std_dev_data = np.sqrt(variance_sum_data)
+            relative_error_data = np.divide(std_dev_data, full_mesh_data, out=np.zeros_like(full_mesh_data),
+                                            where=(full_mesh_data != 0))
+
+            datasets_to_export = {'mean': full_mesh_data, 'std. dev.': std_dev_data,
+                                  'relative_error': relative_error_data}
+
+            # 파일 이름 생성 및 저장
+            base_filename = os.path.basename(sp_path)
             try:
                 index_part = base_filename.split('.')[1]
             except IndexError:
                 index_part = os.path.splitext(base_filename)[0]
             trimmed_tally_name = tally.name.replace('local_', '', 1).replace(' ', '_')
-            output_filename = os.path.join(output_dir, f"{index_part}_{trimmed_tally_name}_unstructured.vtk")
+            output_filename = os.path.join(output_dir, f"{index_part}_{trimmed_tally_name}_{score_to_plot}_unstructured.vtk")
 
-            mesh.write_data_to_vtk(filename=output_filename,
-                                    datasets={'mean': mean_data, 'std. dev.': std_dev_data, 'relative_error': relative_error},
-                                    volume_normalization=should_normalize
-                                    )
+            mesh.write_data_to_vtk(filename=output_filename, datasets=datasets_to_export, volume_normalization=should_normalize)
             return ('success', f"Saved Unstructured VTK {output_filename}")
 
         # Regular, Cylindrical 등 OpenMC의 mesh tally
@@ -335,9 +359,10 @@ class PostproGUI:
 
             self.current_tally = self.sp_object.get_tally(id=tally_id)
             scores = self.current_tally.scores
-            self.score_combobox['values'] = scores
-            if scores:
-                self.selected_score.set(scores[0])
+            display_scores = ['-- ALL SCORES --'] + scores if scores else []
+            self.score_combobox['values'] = display_scores
+            if display_scores:
+                self.selected_score.set(display_scores[0])
             else:
                 self.selected_score.set('')
 
