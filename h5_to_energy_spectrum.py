@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk
 import os
 import openmc
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -203,31 +204,48 @@ class SpectrumPlotterApp:
                     with openmc.StatePoint(path) as sp:
                         tally = sp.get_tally(id=tally_id)
                         df = tally.get_pandas_dataframe()
+                        is_multi_index = isinstance(df.columns, pd.MultiIndex)
 
-                        df_filtered = df[df['score'] == self.selected_score]
+                        # MultiIndex와 일반 Index 모두에 대해 score_key 정의
+                        score_key = ('score', '') if is_multi_index else 'score'
+                        df_filtered = df[df[score_key] == self.selected_score]
 
-                        if 'material' in df.columns:
-                            df_grouped = df_filtered.groupby('energy low [eV]')['mean'].sum().reset_index()
+                        # MultiIndex와 일반 Index 모두에 대해 필터링 및 그룹화
+                        energy_low_key = ('energy low [eV]', '') if is_multi_index else 'energy low [eV]'
+                        energy_high_key = ('energy high [eV]', '') if is_multi_index else 'energy high [eV]'
+                        mean_key = ('mean', '') if is_multi_index else 'mean'
+                        material_key = ('material', '') if is_multi_index else 'material'
+
+                        if material_key in df_filtered.columns:
+                            df_grouped = df_filtered.groupby([energy_low_key, energy_high_key])[
+                                mean_key].sum().reset_index()
                         else:
                             df_grouped = df_filtered
 
-                        energy_bins = df_grouped['energy low [eV]']
+                        energy_low = df_grouped['energy low [eV]']
+                        energy_high = df_grouped['energy high [eV]']
                         raw_values = df_grouped['mean']
 
+                        lethargy_width = np.log(energy_high / energy_low)
+
+                        values_per_lethargy = np.divide(raw_values, lethargy_width,
+                                                        out=np.zeros_like(raw_values, dtype=float),
+                                                        where=(lethargy_width > 1e-12))
+
                         if self.selected_score == 'flux':
-                            normalized_values = raw_values * source_rate / volume
+                            normalized_values = values_per_lethargy * source_rate / volume
                         elif self.selected_score == 'heating':
-                            normalized_values = raw_values * source_rate * 1.60E-19 / volume
+                            normalized_values = values_per_lethargy * source_rate * 1.60E-19 / volume
                         else:
-                            normalized_values = raw_values * source_rate
+                            normalized_values = values_per_lethargy * source_rate
 
                         filename = os.path.basename(path)
                         label = f"{filename} (Tally: {tally_name})"
-                        self.ax.step(energy_bins, normalized_values, where='post', label=label)
+                        self.ax.step(energy_low, normalized_values, where='post', label=label)
 
                         # CSV 저장을 위해 데이터 수집
                         if 'Energy_low [eV]' not in combined_data_for_csv:
-                            combined_data_for_csv['Energy_low [eV]'] = energy_bins
+                            combined_data_for_csv['Energy_low [eV]'] = energy_low
                         col_name = f"{self.selected_score}_{filename}_{tally_name.replace(' ', '_')}"
                         combined_data_for_csv[col_name] = normalized_values
                 except Exception as e:
@@ -244,11 +262,11 @@ class SpectrumPlotterApp:
             self.current_plot_data = None
 
         if self.selected_score == 'flux':
-            y_label = 'Flux [particles/cm$^2$/sec]'
+            y_label = 'Flux [particles/cm$^2$/sec] (per unit lethargy)'
         elif self.selected_score == 'heating':
-            y_label = 'Heating [W/cm$^3$]'
+            y_label = 'Heating [W/cm$^3$] (per unit lethargy)'
         else:
-            y_label = f'{self.selected_score.capitalize()} Rate [reactions/sec]'
+            y_label = f'{self.selected_score.capitalize()} Rate [reactions/sec] (per unit lethargy)'
 
         self.ax.legend(fontsize='small')
         self.ax.set_xscale(self.x_scale_var.get())
