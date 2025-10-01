@@ -1,0 +1,139 @@
+# Configuration file for OpenMC simulation
+
+# ==============================================================================================
+# Shared parameters for LP/HP model
+# ==============================================================================================
+
+# Simulation settings
+simulation:
+  particles: 100  # particle generation per single batch
+  batches: 5  # iteration of independent simulation
+  inactive: 0  # not needed for fixed-source (fusion) simulation
+  n_source_points: 10000  # number of neutron sources at which the simulation starts
+  max_tracks: 10000  # maximum number of particles to be tracked
+  threads: 20  # number of CPU threads for simulation
+
+# Material settings
+materials:
+  breeder:  # ACB (Advanced Ceramic Breeder, Li4SiO4 + Li2TiO3)
+    li_enrichment: 60.0  # percentage of 6Li enrichment
+    packing_fraction: 0.64  # packing fraction of breeder pebble (= 1 - void fraction)
+    mixture_Li4SiO4: 0.65  # percentage of Li4SiO4 in ACB (volume fraction)
+    mixture_Li2TiO3: 0.35  # percentage of Li2TiO3 in ACB (volume fraction)
+    temperature: 1200  # temperature of breeder in Kelvin
+
+  multiplier:  # Be12Ti
+    temperature: 1200  # temperature of multiplier in Kelvin
+
+  eurofer:  # RAFM (Reduced Activation Ferritic-Martensitic) steel
+    temperature: 800  # temperature of eurofer in Kelvin
+
+  he:  # working fluid
+    temperature: 723  # temperature of Helium in Kelvin
+    pressure: 8.0E+6  # pressure of Helium in Pascal
+    temperature_purge: 723  # temperature of purge Helium in Kelvin
+    pressure_purge: 0.2E+6  # pressure of purge Helium in Pascal
+
+# Common geometry settings
+geometry:
+  tokamak_major_radius: 906.0
+  tokamak_minor_radius: 292.258
+
+# Center coordinates for visualization
+2D_plot:
+  x_coord: 0.0
+  y_coord: 0.0
+  z_coord: 1221.0
+
+
+# ==============================================================================================
+# Parameters for each model (LP or HP)
+# ==============================================================================================
+models:
+  # ------------------- Parameters of LP model -------------------
+  LP:
+    characteristic_length: 7.217  # Edge length of triangle or hexagon depending on your geometry unit cell
+    axial_end: 1244.458  # axial length from the first wall to the axial end of the domain
+
+    dagmc_path: '/opt/geometries/20250815_EU_DEMO_HCPB_LP_WIDE_CELL_ZAxis_Channel.h5m'
+
+    csg_geometry:
+      plane:
+        first_wall_thickness: 0.2
+        fw_channel_thickness: 2.0
+        fw_channel_to_impinging: 0.4
+        fw_channel_to_multiplier: 0.5
+        length_multiplier: 40.0
+        impinging_to_pin: 1.0
+        pin_tip_thickness: 0.3
+        cone_axial: 5.3
+        length_straight: 37.0
+      cylinder:
+        multiplier_inner: 4.0
+        tube_outer: 3.9
+        tube_inner: 3.5
+        pin_outer: 3.3
+        breeder_outer: 3.0
+        breeder_inner: 1.4
+        pin_inner: 0.8
+      rectangle:
+        width: 1.2
+        height: 1.2
+        pitch: 1.65
+        fw_back_to_channel_front: 0.2
+      hexagon:
+        unit: 7.217
+        multiplier: 6.64
+      cone:
+        diagonal_angle: 0.2281
+
+    mesh_cylindrical:
+      r_min: 0.0
+      r_max: 6.6
+      division_r: 67
+      z_min: 1198.258
+      z_max: 1244.458
+      division_z: 463
+
+  # ------------------- Parameters of HP model -------------------
+  HP:
+    characteristic_length: 7.333
+    axial_end: 1244.458
+
+    dagmc_path: '/opt/geometries/20250825_EU_DEMO_HCPB_HP_WIDE_CELL_ZAxis_Channel.h5m'
+
+    csg_geometry:
+      plane:
+        first_wall_thickness: 0.2
+        fw_channel_thickness: 2.2
+        impinging_to_pin: 1.2
+        impinging_to_outer_multiplier: 0.5
+        length_inner_multiplier: 18.0
+        pin_tip_thickness: 0.1
+        length_outer_multiplier: 31.0
+        inner_multiplier_back_to_axial_end: 24.5
+        purge_gap: 0.3
+      cylinder:
+        outer_multiplier: 5.1
+        tube_outer: 5.0
+        tube_inner: 4.6
+        pin_outer: 4.4
+        breeder_outer: 4.3
+        breeder_inner: 3.0
+        multiplier_inner: 0.7
+        pin_inner: 0.6
+      rectangle:
+        width: 1.2
+        height: 1.2
+        pitch: 1.65
+        fw_back_to_channel_front: 0.3
+      hexagon:
+        unit: 7.333
+
+    mesh_cylindrical:
+      r_min: 0.0
+      r_max: 7.3
+      division_r: 74
+      z_min: 1198.258
+      z_max: 1244.458
+      division_z: 463

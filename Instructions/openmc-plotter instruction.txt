@@ -1,22 +1,30 @@
-아래를 따라해서 linux 상에서 openmc-plotter 실행
-
-1. CMD 실행
-2. docker images
-	--> 실행 시 Docker Desktop 상의 image 목록 출력
-3. docker run -it --name [원하는 container 이름] -e "DISPLAY=host.docker.internal:0.0" -v [본인 작업 로컬 폴더]:/opt/" [image 이름] bash
-	ex) docker run -it --name openmc_container_v1.0 -e "DISPLAY=host.docker.internal:0.0" -v "D:/HTL/03.PersonalResearch/OpenMC:/opt/" openmc_psh_v5.5 bash
-4. 컨테이너 내부 환경으로 진입 (CMD 경로가 root@~~~로 변경된 것 확인)
-5. ls
-	--> 입력 시 컨테이너 내부의 폴더 보임. opt 폴더 있는지 확인
-6. cd opt
-7. ls
-	--> 입력 시 3번에서 연결한 나의 로컬 폴더가 보임.
-8. openmc-plotter
-	--> Container 상에서 openmc-plotter 실행
+Executing openmc-plotter in a Linux Container via Docker
 
 
-** 만약 VcXsrv를 사용하고 있는데 openmc-plotter의 창 크기 조절이 안되거나 버튼 클릭에 반응이 없거나 등 문제가 있으면,
-9. MobaXterm 설치
-10. MobaXterm 실행
-11. MobaXterm 창이 켜진 상태에서 최소화 해놓기.
-12. 2번부터 다시 실행
+This guide details the steps to launch the openmc-plotter graphical utility within your Docker Linux container, assuming you have already set up your OpenMC image and the VcXsrv X-server on Windows.
+
+Standard Procedure (Using VcXsrv)
+	○ Open Command Prompt (CMD).
+	○ Verify Docker Images: List your available Docker images to get the correct name or ID.
+	    - docker images
+	○ Run Container with Graphics and Volume Mapping: Start the container, map the display for graphical output, and link your local work folder to the container's /opt/ directory.
+	    - docker run -it --name [your_container_name] -e "DISPLAY=host.docker.internal:0" -v "[your_local_work_folder_path]:/opt/" [image_name] bash
+	    Example: docker run -it --name openmc_container_v1.0 -e "DISPLAY=host.docker.internal:0" -v "D:/HTL/03.PersonalResearch/OpenMC:/opt/" openmc_psh_v5.5 bash
+	○ Enter Container Environment: Confirm the CMD prompt has changed to reflect the container's root environment (e.g., root@~~~:/#).
+	○ Check Root Directory:
+	    - ls (Verify that the opt folder is present.)
+	○ Navigate to Work Folder:
+	    - cd opt
+	○ Check Mapped Folder:
+	    - ls (Verify that your local files and folders are visible.)
+	○ Execute openmc-plotter: Launch the graphical utility. The window should appear on your Windows desktop.
+	    - openmc-plotter
+
+
+Troubleshooting Graphics Issues (Using MobaXterm)
+
+If you encounter issues with VcXsrv (e.g., resizing problems, unresponsive buttons in openmc-plotter):
+	○ Install MobaXterm: Download and install MobaXterm.
+	○ Launch and Minimize MobaXterm: Run MobaXterm, and keep the main application window open (you can minimize it, but it must be running). MobaXterm includes its own superior X-server.
+	○ Re-run the process.
+	○ Docker will automatically use MobaXterm's running X-server for the display, which should resolve the graphical bugs.

@@ -26,4 +26,4 @@ tqdm
 PyYAML
 git+https://github.com/openmc-dev/openmc_mcnp_adapter.git
 git+https://github.com/openmc-dev/openmc_cad_adapter.git
-# 필요 시 추가
+# Add if needed
