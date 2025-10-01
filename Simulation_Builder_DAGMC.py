@@ -20,8 +20,8 @@ def create_unit_geometry_source_points(n_points, z_coord, characteristic_length)
 
     # 해석 형상을 충분히 감싸는 큰 사각형 생성
     z = z_coord
-    abs_x_max = s * (np.sqrt(3.0) / 2.0)
-    abs_y_max = s
+    abs_x_max = s * 5
+    abs_y_max = s * 5
 
     print(f"\nGenerating {n_points} source points on a unit cross-section at z={z_coord}...")
 
@@ -31,8 +31,17 @@ def create_unit_geometry_source_points(n_points, z_coord, characteristic_length)
         x = np.random.uniform(-abs_x_max, abs_x_max)
         y = np.random.uniform(-abs_y_max, abs_y_max)
 
+        # One-sixth cell
+        # is_inside = (abs(np.sqrt(3.0) * x + y) >= 0) and \
+        #             (abs(-np.sqrt(3.0) * x + y) >= 0)
+
+        # Unit cell
         is_inside = (abs(-x + (y * np.sqrt(3.0))) <= np.sqrt(3.0) * s) and \
                     (abs(x + (y * np.sqrt(3.0))) <= np.sqrt(3.0) * s)
+
+        # Wide cell
+        # is_inside = (abs(np.sqrt(3.0) * x + y) <= s * np.sqrt(3.0)) and \
+        #             (abs(-np.sqrt(3.0) * x + y) <= s * np.sqrt(3.0))
 
         if is_inside:
             points.append((x, y, z))
@@ -175,44 +184,6 @@ class NuclearFusion:
                     openmc_materials_list.append(eurofer_first_wall_channel_mat)
                     print(f"  -> Created 'eurofer_first_wall_channel' (ID: {eurofer_first_wall_channel_mat.id})")
 
-                # elif mat_name == 'He':
-                #     print(f"Cloning material: {mat_name} for different components...\n")
-                #
-                #     # Inner He 용
-                #     he_inner_mat = openmc_mat.clone()
-                #     he_inner_mat.id = 201
-                #     he_inner_mat.name = 'He_inner'
-                #     self.materials['He_inner'] = he_inner_mat
-                #     openmc_materials_list.append(he_inner_mat)
-                #     print(f"  -> Created 'He_inner' (ID: {he_inner_mat.id})")
-                #
-                #     # Outer He 용
-                #     he_outer_mat = openmc_mat.clone()
-                #     he_outer_mat.id = 202
-                #     he_outer_mat.name = 'He_outer'
-                #     self.materials['He_outer'] = he_outer_mat
-                #     openmc_materials_list.append(he_outer_mat)
-                #     print(f"  -> Created 'He_outer' (ID: {he_outer_mat.id})")
-
-                # elif mat_name == 'Be12Ti':
-                #     print(f"Cloning material: {mat_name} for different components...\n")
-                #
-                #     # Inner Be12Ti 용
-                #     be12ti_inner_mat = openmc_mat.clone()
-                #     be12ti_inner_mat.id = 501
-                #     be12ti_inner_mat.name = 'Be12Ti_inner'
-                #     self.materials['Be12Ti_inner'] = be12ti_inner_mat
-                #     openmc_materials_list.append(be12ti_inner_mat)
-                #     print(f"  -> Created 'Be12Ti_inner' (ID: {be12ti_inner_mat.id})")
-                #
-                #     # Outer Be12Ti 용
-                #     be12ti_outer_mat = openmc_mat.clone()
-                #     be12ti_outer_mat.id = 502
-                #     be12ti_outer_mat.name = 'Be12Ti_outer'
-                #     self.materials['Be12Ti_outer'] = be12ti_outer_mat
-                #     openmc_materials_list.append(be12ti_outer_mat)
-                #     print(f"  -> Created 'Be12Ti_outer' (ID: {be12ti_outer_mat.id})")
-
                 else:
                     output_name = mat_config['output_name']
                     openmc_mat.id = mat_id
@@ -313,7 +284,39 @@ class NuclearFusion:
         만약 해석하고자 하는 형상이 육각기둥이 아니라면,
         final_region을 본인 형상에 맞게 수정해야 함.
         """
-        
+        # =============================================================================================================
+        # One-sixth cell
+        # triangle_1_plane = openmc.Plane(
+        #     a=1.0 / np.sqrt(3),
+        #     b=-1.0,
+        #     c=0.0,
+        #     d=0.0,
+        #     name='triangle_1_plane',
+        #     boundary_type='reflective'
+        # )
+        #
+        # triangle_2_plane = openmc.Plane(
+        #     a=1.0 / np.sqrt(3),
+        #     b=1.0,
+        #     c=0.0,
+        #     d=0.0,
+        #     name='triangle_2_plane',
+        #     boundary_type='reflective'
+        # )
+        #
+        # triangle_3_plane = openmc.XPlane(
+        #     x0=self.config['geometry']['characteristic_length'] * (np.sqrt(3.0) / 2.0),
+        #     name='triangle_3_plane',
+        #     boundary_type='reflective'
+        # )
+        # z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
+        # z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
+        #
+        # final_region = +triangle_1_plane & +triangle_2_plane & -triangle_3_plane & +z_min_plane & -z_max_plane
+        # =============================================================================================================
+
+        # =============================================================================================================
+        # Unit cell
         # HexagonalPrism은 z축 axis만 지원
         hex_prism = openmc.model.HexagonalPrism(
             edge_length=(self.config['geometry']['characteristic_length']),
@@ -326,6 +329,23 @@ class NuclearFusion:
         z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
 
         final_region = -hex_prism & +z_min_plane & -z_max_plane
+        # =============================================================================================================
+
+        # =============================================================================================================
+        # Wide cell
+        # hex_prism = openmc.model.HexagonalPrism(
+        #     edge_length=(self.config['geometry']['characteristic_length']),
+        #     origin=(0.0, 0.0),
+        #     orientation='x',
+        #     boundary_type='periodic'
+        # )
+        #
+        # z_min_plane = openmc.ZPlane(z0=self.config['bounding']['z_min'], boundary_type='vacuum')
+        # z_max_plane = openmc.ZPlane(z0=self.config['bounding']['z_max'], boundary_type='vacuum')
+        #
+        # final_region = -hex_prism & +z_min_plane & -z_max_plane
+        # =============================================================================================================
+
 
         # DAGMC를 위해 형상 불러오기
         h5m_path = self.config['geometry']['h5m_path']
@@ -571,9 +591,10 @@ class NuclearFusion:
             tungsten_filter = openmc.MaterialFilter([tungsten_object], filter_id=51)
 
             # Energy filter
-            energy_bins = np.logspace(-3, 7.18, 1001)  # 0.001 eV ~ 15.1 MeV 범위를 1000개로 쪼개기
-            energy_filter = openmc.EnergyFilter(energy_bins, filter_id=61)
-            # energy_filter = openmc.EnergyFilter.from_group_structure('UKAEA-1102') # 미리 정의된 에너지 bin 사용
+            # energy_bins = np.logspace(-3, 7.18, 1001)  # 0.001 eV ~ 15.1 MeV 범위를 1000개로 쪼개기
+            # energy_filter = openmc.EnergyFilter(energy_bins, filter_id=61)
+            energy_filter = openmc.EnergyFilter.from_group_structure('CCFE-709') # 미리 정의된 에너지 bin 사용
+            energy_filter(filter_id=61)
 
             # Particle filter
             neutron_filter = openmc.ParticleFilter(['neutron'], filter_id=71)
