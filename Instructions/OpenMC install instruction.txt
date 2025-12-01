@@ -48,12 +48,13 @@ Option 1: Manually Building and Configuring the OpenMC Environment
 	    - docker cp "[path_to_requirements.txt]" [container_name]:/app/
 	    - docker exec [container_name] pip install -r /app/requirements.txt
 	○ Install Required Libraries: Install libraries needed for packages like Matplotlib/VTK.
-	    - apt-get install -y --fix-missing \
-    libmpich-dev libhdf5-serial-dev libhdf5-mpich-dev \
-    libpng-dev libglu1-mesa libxcursor1  libxrender1 \
-    libxi6 libxrandr2 libgl1 libglu1 libglx-mesa0 \
-    libxinerama1 libexpat1 libeigen3-dev libtbb-dev \
-    libglfw3-dev libxft2
+	    - apt-get update && \
+	    apt-get install -y --fix-missing \
+        libmpich-dev libhdf5-serial-dev libhdf5-mpich-dev \
+        libpng-dev libglu1-mesa libxcursor1 libxrender1 \
+        libxi6 libxrandr2 libgl1 libglu1 libglx-mesa0 \
+        libxinerama1 libexpat1 libeigen3-dev libtbb-dev \
+        libglfw3-dev libxft2 python3-tk
 
 4. Final Image Creation
 	○ Create a new, persistent Docker image containing all your configurations (data, packages, and libraries).
